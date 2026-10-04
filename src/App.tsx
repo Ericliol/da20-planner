@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AircraftDocuments } from './components/AircraftDocuments';
 import { AircraftEditor } from './components/AircraftEditor';
 import { Performance } from './components/Performance';
 import { StatusPill, Toggle } from './components/ui';
@@ -77,7 +78,8 @@ export default function App() {
               onChange={(list, selectedId) => setState((s) => ({ ...s, aircraft: list, selectedId }))}
               onRestoreBuiltIn={() => setState((s) => ({ ...s, aircraft: DEFAULT_STATE.aircraft, selectedId: DEFAULT_STATE.selectedId }))}
             />
-            <div className="text-sm text-slate-600">
+            <div className="space-y-4 text-sm text-slate-600">
+              <AircraftDocuments aircraft={aircraft} />
               <button
                 type="button"
                 className="rounded-lg border border-slate-300 px-3 py-2 hover:bg-white"

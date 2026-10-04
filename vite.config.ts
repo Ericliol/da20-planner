@@ -11,7 +11,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['apple-touch-icon.png'],
+      includeAssets: ['apple-touch-icon.png', 'docs/*.jpg'],
       manifest: {
         name: 'DA20-C1 W&B and Performance',
         short_name: 'DA20 Planner',
