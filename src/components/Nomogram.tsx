@@ -7,7 +7,7 @@ import { baseDistance, PA_CURVES_FT, TAKEOFF_CHART, type TakeoffResult } from '.
  * inputs overlaid, so the result can be checked against the paper chart.
  */
 const PW = 150; // panel width
-const GAP = 10;
+const GAP = 22;
 const H = 300;
 const PAD = { l: 40, t: 22, b: 34 };
 const D = [200, 1000];
@@ -106,10 +106,10 @@ export function Nomogram({ r }: { r: TakeoffResult }) {
             {[300, 400, 500, 600, 700, 800, 900].map((m) => (
               <line key={m} x1={x0} x2={x0 + PW} y1={sy(m)} y2={sy(m)} stroke="#f1f5f9" />
             ))}
-            {p.ticks.map((t) => (
+            {p.ticks.map((t, k) => (
               <g key={t}>
                 <line x1={sx(t)} x2={sx(t)} y1={PAD.t} y2={H - PAD.b} stroke="#f1f5f9" />
-                <text x={sx(t)} y={H - PAD.b + 12} textAnchor="middle" fontSize="9" fill="#64748b">
+                <text x={sx(t)} y={H - PAD.b + 12} textAnchor={k === 0 ? 'start' : k === p.ticks.length - 1 ? 'end' : 'middle'} fontSize="9" fill="#64748b">
                   {t}
                 </text>
               </g>
