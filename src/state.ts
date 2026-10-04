@@ -42,6 +42,22 @@ export const VH_XTN: Aircraft = {
   notes: 'S/N 00054. Weighing WB-6071, 30-Nov-15: 556.0 kg @ 265.7 mm (147753 kg·mm). MT propeller.',
 };
 
+// VH-HUU load data sheet, Issue One, 14-7-02 (P.A. Denholm, Weight Control Auth. AS2):
+// 548.5 kg, arm 238 mm, 130578 kg·mm. The printed arm is rounded, so the arm is
+// taken from the moment (130578 / 548.5 = 238.06 mm) to reproduce it exactly.
+export const VH_HUU: Aircraft = {
+  id: 'vh-huu',
+  registration: 'VH-HUU',
+  emptyMassKg: 548.5,
+  emptyArmM: 130.578 / 548.5,
+  fuelSystem: 'type2',
+  idle1000Rpm: false,
+  notes:
+    'S/N C0093, ex N157AA. Load data sheet 14-7-02: 548.5 kg @ 238 mm (130578 kg·mm), incl. unusable fuel & full engine oil. Fuel system type not on the sheet: check.',
+};
+
+const BUILT_IN_AIRCRAFT = [VH_XTN, VH_HUU];
+
 const aerodrome: Aerodrome = {
   elevationFt: 0,
   qnhHpa: 1013,
@@ -56,7 +72,7 @@ const aerodrome: Aerodrome = {
 export const DEFAULT_STATE: AppState = {
   version: 1,
   units: { mass: 'kg', fuel: 'L' },
-  aircraft: [VH_XTN],
+  aircraft: BUILT_IN_AIRCRAFT,
   selectedId: VH_XTN.id,
   loading: { seatsKg: 160, baggageKg: 0, baggageExtKg: 0, fuelL: 91, taxiFuelL: 5, tripFuelL: 30 },
   departure: { ...aerodrome, obstacleFt: 50 },
@@ -80,6 +96,8 @@ function load(): AppState {
       loading: { ...DEFAULT_STATE.loading, ...s.loading },
       departure: { ...DEFAULT_STATE.departure, ...s.departure },
       arrival: { ...DEFAULT_STATE.arrival, ...s.arrival },
+      // Add built-in aircraft that were introduced after this state was saved.
+      aircraft: [...s.aircraft, ...BUILT_IN_AIRCRAFT.filter((a) => !s.aircraft.some((x) => x.id === a.id))],
     };
   } catch {
     return DEFAULT_STATE;

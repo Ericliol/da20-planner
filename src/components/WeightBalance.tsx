@@ -49,7 +49,7 @@ export function WeightBalance(props: {
       title: 'Empty weight',
       desc: [
         'Use the data for your airplane recorded in the equipment list, including unusable fuel and lubricant.',
-        `${lever(Number(aircraft.emptyArmM.toFixed(4)), (aircraft.emptyArmM * IN_PER_M).toFixed(2))}, from the ${aircraft.registration} weighing report`,
+        `${lever(Number(aircraft.emptyArmM.toFixed(4)), (aircraft.emptyArmM * IN_PER_M).toFixed(2))}, from the ${aircraft.registration} load data sheet`,
       ],
       ...station(empty),
     },

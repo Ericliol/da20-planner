@@ -4,6 +4,7 @@ import { windComponents } from './atmos';
 import { OutOfChartError } from './interp';
 import { landingDistance } from './landing';
 import { takeoffDistance } from './takeoff';
+import { VH_HUU } from '../state';
 import { type Aircraft, computeWB } from './wb';
 
 const VH_XTN: Aircraft = {
@@ -46,6 +47,13 @@ describe('weight & balance', () => {
     expect(r.takeoff.massKg).toBeCloseTo(mass, 1);
     expect(r.takeoff.armM * 1000).toBeCloseTo(armMm, 0);
     expect(r.ok).toBe(true);
+  });
+
+  it('VH-HUU empty weight matches its load data sheet (548.5 kg, 130578 kg·mm)', () => {
+    const r = computeWB(VH_HUU, { ...noFuel, seatsKg: 0, baggageKg: 0 });
+    expect(r.zeroFuel.massKg).toBeCloseTo(548.5);
+    expect(r.zeroFuel.momentKgM * 1000).toBeCloseTo(130578, 0);
+    expect(r.zeroFuel.armM * 1000).toBeCloseTo(238, 0);
   });
 
   it('flags aft CG with a light pilot, max baggage and full fuel', () => {
