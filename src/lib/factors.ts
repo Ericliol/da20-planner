@@ -1,5 +1,5 @@
 /**
- * Australian take-off / landing distance factors (CAO 20.7.4), applied to the
+ * Australian take-off / landing distance factors (CAO 20.7.4 para 6.1 and 10.1), applied to the
  * AFM distance to / from 50 ft. The factored distance must not exceed TODA / LDA.
  *
  *   Take-off: 1.15 up to 2000 kg MTOW, linear to 1.25 at 3500 kg, 1.25 above.
@@ -15,6 +15,8 @@ export const takeoffFactor = (mtowKg: number) => interp(mtowKg, 2000, 3500, 1.15
 export const landingFactor = (mtowKg: number) => interp(mtowKg, 2000, 4500, 1.15, 1.43);
 
 export const FACTOR_SOURCE = 'CAO 20.7.4';
+/** CAO 20.7.4 on the Federal Register of Legislation (no longer in force from 2 Dec 2021). */
+export const FACTOR_URL = 'https://www.legislation.gov.au/F2005B00786/latest/text';
 
 /**
  * Runway surface factors from UK CAA Safety Sense 09 "Weight, balance and

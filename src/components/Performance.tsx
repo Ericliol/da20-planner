@@ -1,6 +1,6 @@
 import { MAX_TAKEOFF_KG } from '../lib/afm';
-import { densityAltitudeFt, pressureAltitudeFt, windComponents } from '../lib/atmos';
-import { FACTOR_SOURCE, type Surface, SURFACE_SOURCE, SURFACE_URL, SURFACES } from '../lib/factors';
+import { densityAltitudeFt, isaTempC, pressureAltitudeFt, windComponents } from '../lib/atmos';
+import { FACTOR_SOURCE, FACTOR_URL, type Surface, SURFACE_SOURCE, SURFACE_URL, SURFACES } from '../lib/factors';
 import { fmtDist, fmtFt, fmtMass } from '../lib/format';
 import { computePerformance } from '../lib/performance';
 import type { Aircraft, WBResult } from '../lib/wb';
@@ -62,28 +62,67 @@ function SurfaceSelect({ value, onChange }: { value: Surface; onChange: (s: Surf
 
 function Atmos({ a }: { a: Aerodrome }) {
   const pa = pressureAltitudeFt(a.elevationFt, a.qnhHpa);
+  const isa = isaTempC(pa);
+  const da = densityAltitudeFt(pa, a.oatC);
   const w = windComponents(a.runwayHeadingDeg, a.windDirDeg, a.windKt);
+  const angle = ((((a.windDirDeg - a.runwayHeadingDeg) % 360) + 540) % 360) - 180;
+  const n = (v: number, d = 0) => v.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
   return (
-    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">
-      <div>
-        <dt className="text-xs text-slate-500">Pressure alt</dt>
-        <dd className="tabular-nums">{Math.round(pa)} ft</dd>
-      </div>
-      <div>
-        <dt className="text-xs text-slate-500">Density alt</dt>
-        <dd className="tabular-nums">{Math.round(densityAltitudeFt(pa, a.oatC))} ft</dd>
-      </div>
-      <div>
-        <dt className="text-xs text-slate-500">{w.headwind >= 0 ? 'Headwind' : 'Tailwind'}</dt>
-        <dd className={`tabular-nums ${w.headwind < -0.05 ? 'font-semibold text-amber-700' : ''}`}>{Math.abs(w.headwind).toFixed(1)} kt</dd>
-      </div>
-      <div>
-        <dt className="text-xs text-slate-500">Crosswind</dt>
-        <dd className="tabular-nums">
-          {Math.abs(w.crosswind).toFixed(1)} kt {w.crosswind > 0.05 ? 'from R' : w.crosswind < -0.05 ? 'from L' : ''}
-        </dd>
-      </div>
-    </dl>
+    <>
+      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-4">
+        <div>
+          <dt className="text-xs text-slate-500">Pressure alt</dt>
+          <dd className="tabular-nums">{Math.round(pa)} ft</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-slate-500">Density alt</dt>
+          <dd className="tabular-nums">{Math.round(da)} ft</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-slate-500">{w.headwind >= 0 ? 'Headwind' : 'Tailwind'}</dt>
+          <dd className={`tabular-nums ${w.headwind < -0.05 ? 'font-semibold text-amber-700' : ''}`}>{Math.abs(w.headwind).toFixed(1)} kt</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-slate-500">Crosswind</dt>
+          <dd className="tabular-nums">
+            {Math.abs(w.crosswind).toFixed(1)} kt {w.crosswind > 0.05 ? 'from R' : w.crosswind < -0.05 ? 'from L' : ''}
+          </dd>
+        </div>
+      </dl>
+      <details className="mt-2 text-xs text-slate-600">
+        <summary className="cursor-pointer select-none font-medium text-sky-700">Show working</summary>
+        <div className="mt-2 space-y-2 rounded-lg bg-slate-50 p-3 font-mono leading-relaxed tabular-nums">
+          <div>
+            <div className="font-sans font-semibold text-slate-700">Pressure altitude (ISA formula)</div>
+            PA = elevation + 145,366 × (1 − (QNH ÷ 1013.25)^0.190284)
+            <br />= {n(a.elevationFt)} + 145,366 × (1 − ({a.qnhHpa} ÷ 1013.25)^0.190284)
+            <br />= {n(a.elevationFt)} + {n(pa - a.elevationFt, 1)} = <b>{n(pa)} ft</b>
+            <br />
+            <span className="font-sans text-slate-500">
+              Rule of thumb: elevation + (1013 − QNH) × 30 = {n(a.elevationFt)} + {n((1013 - a.qnhHpa) * 30)} ={' '}
+              {n(a.elevationFt + (1013 - a.qnhHpa) * 30)} ft. The exact formula uses 1013.25 hPa, which is why QNH 1013
+              gives a few feet.
+            </span>
+          </div>
+          <div>
+            <div className="font-sans font-semibold text-slate-700">Density altitude</div>
+            ISA temp = 15 − 1.98 × PA ÷ 1000 = 15 − 1.98 × {n(pa)} ÷ 1000 = {n(isa, 1)} °C
+            <br />
+            ISA deviation = OAT − ISA = {a.oatC} − {n(isa, 1)} = {n(a.oatC - isa, 1)} °C
+            <br />
+            DA = PA + 120 × ISA deviation = {n(pa)} + 120 × {n(a.oatC - isa, 1)} = <b>{n(da)} ft</b>
+          </div>
+          <div>
+            <div className="font-sans font-semibold text-slate-700">Wind components</div>
+            angle = wind − runway = {a.windDirDeg}° − {a.runwayHeadingDeg}° = {n(angle)}°
+            <br />
+            headwind = {a.windKt} × cos {n(angle)}° = {n(w.headwind, 1)} kt{w.headwind < 0 ? ' (negative = tailwind)' : ''}
+            <br />
+            crosswind = {a.windKt} × sin {n(angle)}° = {n(w.crosswind, 1)} kt (+ from right)
+          </div>
+        </div>
+      </details>
+    </>
   );
 }
 
@@ -168,8 +207,14 @@ export function Performance(props: {
 
       <Card title="Distance factors">
         <p className="text-sm text-slate-700">
-          Australian rule ({FACTOR_SOURCE}): multiply the AFM distance to 50 ft (take-off) or from 50 ft (landing) by the
-          factor for the aeroplane's MTOW. The result must not exceed TODA / LDA.
+          Australian rule (
+          <a href={FACTOR_URL} target="_blank" rel="noreferrer" className="text-sky-700 underline">
+            {FACTOR_SOURCE} para 6.1 / 10.1
+          </a>
+          ): multiply the AFM distance to 50 ft (take-off) or from 50 ft (landing) by the factor for the aeroplane's MTOW.
+          The result must not exceed TODA / LDA. CAO 20.7.4 has been{' '}
+          <b>no longer in force since 2 Dec 2021</b> (replaced by CASR Part 91), but 1.15 is still the common standard.
+          Check your school's operations manual.
         </p>
         <table className="mt-2 w-full text-sm tabular-nums">
           <tbody>
