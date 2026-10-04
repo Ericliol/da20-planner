@@ -23,9 +23,26 @@ interface Panel {
   /** Support lines: vertical from the axis value up to the curve, horizontal from there to the next panel. */
   vline: [number, number];
   hline: [number, number];
+  /** Label for where the vertical line meets the x-axis. */
+  xLabel: string;
 }
 
 const clampD = (d: number) => Math.min(1000, Math.max(200, d));
+
+/** Red value tag sitting just above the x-axis. */
+function XTag({ x: at, y, text, min, max }: { x: number; y: number; text: string; min: number; max: number }) {
+  const w = text.length * 5 + 8;
+  // Centre on the intercept, but keep the whole tag inside the panel.
+  const x = Math.min(Math.max(at, min + w / 2 + 2), max - w / 2 - 2);
+  return (
+    <g>
+      <rect x={x - w / 2} y={y - 9} width={w} height={12} rx="3" fill="#fff1f2" stroke="#e11d48" strokeWidth="0.6" />
+      <text x={x} y={y} textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#be123c">
+        {text}
+      </text>
+    </g>
+  );
+}
 
 function range(a: number, b: number, n = 24) {
   return Array.from({ length: n + 1 }, (_, i) => a + ((b - a) * i) / n);
@@ -49,6 +66,7 @@ export function Nomogram({ r }: { r: TakeoffResult }) {
         }
       }),
       vline: [u.oatC, r.base],
+      xLabel: `${u.oatC} °C`,
       hline: [u.oatC, r.base],
     },
     {
@@ -58,6 +76,7 @@ export function Nomogram({ r }: { r: TakeoffResult }) {
       curves: TAKEOFF_CHART.weight,
       path: range(800, u.massKg).map((w) => [w, followGuides(TAKEOFF_CHART.weight, 800, w, r.base)]),
       vline: [u.massKg, r.afterWeight],
+      xLabel: `${Math.round(u.massKg)} kg`,
       hline: [u.massKg, r.afterWeight],
     },
     {
@@ -72,6 +91,7 @@ export function Nomogram({ r }: { r: TakeoffResult }) {
           : [[-5, r.afterWeight] as [number, number], ...range(u.windKt, 0).map((w) => [w, followGuides(TAKEOFF_CHART.tailwind, u.windKt, w, r.afterWeight)] as [number, number]), [20, r.afterWind]],
       // Tailwind: enter at the tailwind value, follow the dashed line up to the 0 kt line.
       vline: [u.windKt, u.windKt >= 0 ? r.afterWind : r.afterWeight],
+      xLabel: u.windKt === 0 ? '0 kt' : `${u.windKt > 0 ? 'HW' : 'TW'} ${Math.abs(u.windKt).toFixed(1)} kt`,
       hline: [Math.max(0, u.windKt), r.afterWind],
     },
     {
@@ -81,6 +101,7 @@ export function Nomogram({ r }: { r: TakeoffResult }) {
       curves: TAKEOFF_CHART.obstacle,
       path: range(0, u.obstacleM).map((h) => [h, followGuides(TAKEOFF_CHART.obstacle, 0, h, r.afterWind)]),
       vline: [u.obstacleM, r.total],
+      xLabel: `${u.obstacleM.toFixed(1)} m`,
       hline: [u.obstacleM, r.total],
     },
   ];
@@ -135,6 +156,9 @@ export function Nomogram({ r }: { r: TakeoffResult }) {
               />
             </g>
             <circle cx={sx(p.hline[0])} cy={sy(clampD(p.hline[1]))} r="2.6" fill="#e11d48" />
+            {/* where the vertical line meets the x-axis */}
+            <line x1={sx(p.vline[0])} x2={sx(p.vline[0])} y1={H - PAD.b - 4} y2={H - PAD.b + 4} stroke="#e11d48" strokeWidth="1.6" />
+            <XTag x={sx(p.vline[0])} y={H - PAD.b - 7} text={p.xLabel} min={x0} max={x0 + PW} />
             <text x={x0 + PW - 3} y={sy(clampD(p.hline[1])) - 4} textAnchor="end" fontSize="9" fontWeight="700" fill="#be123c">
               {Math.round(p.hline[1])} m
             </text>
