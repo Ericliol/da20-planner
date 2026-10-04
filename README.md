@@ -14,6 +14,13 @@ npm test           # golden tests against the AFM / VH-XTN load sheet
 npm run build      # static site in dist/ (deploy anywhere: GitHub Pages, Netlify, ...)
 ```
 
+## Live app
+
+https://ericliol.github.io/da20-planner/: deployed automatically by GitHub Actions on every push to `main`
+(`.github/workflows/deploy.yml` runs the tests, builds, and publishes `dist/`).
+
+On a phone, open the link and use **Add to Home Screen** (Safari share menu / Chrome menu). It then works offline.
+
 ## Where the numbers come from
 
 | Data | Source |
