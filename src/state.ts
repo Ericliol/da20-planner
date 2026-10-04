@@ -64,7 +64,20 @@ export const VH_HUU: Aircraft = {
     'S/N C0093, ex N157AA. Load data sheet 14-7-02: 548.5 kg @ 238 mm (130578 kg·mm), incl. unusable fuel & full engine oil. Fuel system type not on the sheet: check.',
 };
 
-const BUILT_IN_AIRCRAFT = [VH_XTN, VH_HUU];
+// VH-HXX: from the school's aircraft data spreadsheet (548 kg, 123.043 kg·m).
+// No load data sheet on file yet; arm taken from the moment (224.53 mm).
+export const VH_HXX: Aircraft = {
+  id: 'vh-hxx',
+  registration: 'VH-HXX',
+  emptyMassKg: 548,
+  emptyArmM: 123.043 / 548,
+  dataRev: 1,
+  fuelSystem: 'type2',
+  idle1000Rpm: false,
+  notes: 'Empty weight 548 kg, moment 123.043 kg·m (school data spreadsheet). Load data sheet and fuel system type not on file: check.',
+};
+
+const BUILT_IN_AIRCRAFT = [VH_XTN, VH_HUU, VH_HXX];
 
 /**
  * Bring saved aircraft up to date with the built-in data: built-in aircraft

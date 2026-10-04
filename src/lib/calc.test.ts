@@ -4,7 +4,7 @@ import { densityAltitudeFt, pressureAltitudeFt, windComponents } from './atmos';
 import { OutOfChartError } from './interp';
 import { landingDistance } from './landing';
 import { takeoffDistance } from './takeoff';
-import { mergeBuiltInAircraft, VH_HUU, VH_XTN } from '../state';
+import { mergeBuiltInAircraft, VH_HUU, VH_HXX, VH_XTN } from '../state';
 import { type Aircraft, computeWB } from './wb';
 
 const noFuel = { fuelL: 0, taxiFuelL: 0, tripFuelL: 0, baggageExtKg: 0 };
@@ -55,6 +55,12 @@ describe('weight & balance', () => {
     expect(merged.find((a) => a.id === 'vh-xtn')?.emptyArmM).toBeCloseTo(147.753 / 556);
     expect(merged.find((a) => a.id === 'ac-1')).toBe(custom);
     expect(merged.some((a) => a.id === 'vh-huu')).toBe(true);
+  });
+
+  it('VH-HXX empty weight matches the school data (548 kg, 123.043 kg·m)', () => {
+    const r = computeWB(VH_HXX, { ...noFuel, seatsKg: 0, baggageKg: 0 });
+    expect(r.zeroFuel.massKg).toBe(548);
+    expect(r.zeroFuel.momentKgM).toBeCloseTo(123.043, 3);
   });
 
   it('VH-HUU empty weight matches its load data sheet (548.5 kg, 130578 kg·mm)', () => {

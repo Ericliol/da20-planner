@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { ARM, FUEL_KG_PER_L, IN_PER_M, USABLE_FUEL_L } from '../lib/afm';
 import { fmtArm, fmtDist, fmtFt, fmtFuel, fmtMass, fmtMoment, fuelScale, massScale } from '../lib/format';
+import { AIRCRAFT_DOCS } from '../docs';
 import { FACTOR_SOURCE, SURFACES } from '../lib/factors';
 import type { Aircraft, LoadPoint, Loading, Station, WBResult } from '../lib/wb';
 import type { PerformanceResult } from '../lib/performance';
@@ -49,7 +50,7 @@ export function WeightBalance(props: {
       title: 'Empty weight',
       desc: [
         'Use the data for your airplane recorded in the equipment list, including unusable fuel and lubricant.',
-        `${lever(Number(aircraft.emptyArmM.toFixed(4)), (aircraft.emptyArmM * IN_PER_M).toFixed(2))}, from the ${aircraft.registration} load data sheet`,
+        `${lever(Number(aircraft.emptyArmM.toFixed(4)), (aircraft.emptyArmM * IN_PER_M).toFixed(2))}, from the ${aircraft.registration} ${AIRCRAFT_DOCS[aircraft.id]?.length ? 'load data sheet' : 'aircraft data'}`,
       ],
       ...station(empty),
     },
