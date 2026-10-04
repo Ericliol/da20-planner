@@ -20,6 +20,8 @@ export interface Aircraft {
   /** Ground idle set to 1000 RPM (AFM 5.3.12 landing note). */
   idle1000Rpm: boolean;
   notes?: string;
+  /** Revision of built-in aircraft data; a higher value replaces older saved copies on load. */
+  dataRev?: number;
 }
 
 export interface Loading {

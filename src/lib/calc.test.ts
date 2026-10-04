@@ -4,17 +4,9 @@ import { densityAltitudeFt, pressureAltitudeFt, windComponents } from './atmos';
 import { OutOfChartError } from './interp';
 import { landingDistance } from './landing';
 import { takeoffDistance } from './takeoff';
-import { VH_HUU } from '../state';
+import { mergeBuiltInAircraft, VH_HUU, VH_XTN } from '../state';
 import { type Aircraft, computeWB } from './wb';
 
-const VH_XTN: Aircraft = {
-  id: 'vh-xtn',
-  registration: 'VH-XTN',
-  emptyMassKg: 556,
-  emptyArmM: 0.2657,
-  fuelSystem: 'type2',
-  idle1000Rpm: false,
-};
 const noFuel = { fuelL: 0, taxiFuelL: 0, tripFuelL: 0, baggageExtKg: 0 };
 
 describe('weight & balance', () => {
@@ -47,6 +39,22 @@ describe('weight & balance', () => {
     expect(r.takeoff.massKg).toBeCloseTo(mass, 1);
     expect(r.takeoff.armM * 1000).toBeCloseTo(armMm, 0);
     expect(r.ok).toBe(true);
+  });
+
+  it('VH-XTN empty weight matches its load data sheet (556.0 kg, 147753 kg·mm)', () => {
+    const r = computeWB(VH_XTN, { ...noFuel, seatsKg: 0, baggageKg: 0 });
+    expect(r.zeroFuel.massKg).toBeCloseTo(556.0);
+    expect(r.zeroFuel.momentKgM * 1000).toBeCloseTo(147753, 0);
+    expect(r.zeroFuel.armM * 1000).toBeCloseTo(265.7, 1);
+  });
+
+  it('updates saved built-in aircraft with older data, keeps others', () => {
+    const oldXtn = { ...VH_XTN, emptyArmM: 0.2657, dataRev: undefined };
+    const custom = { ...VH_XTN, id: 'ac-1', registration: 'VH-ABC' };
+    const merged = mergeBuiltInAircraft([oldXtn, custom]);
+    expect(merged.find((a) => a.id === 'vh-xtn')?.emptyArmM).toBeCloseTo(147.753 / 556);
+    expect(merged.find((a) => a.id === 'ac-1')).toBe(custom);
+    expect(merged.some((a) => a.id === 'vh-huu')).toBe(true);
   });
 
   it('VH-HUU empty weight matches its load data sheet (548.5 kg, 130578 kg·mm)', () => {

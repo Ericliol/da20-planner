@@ -35,12 +35,15 @@ export interface AppState {
   ignoreHeadwind: boolean;
 }
 
-// VH-XTN weighing report WB-6071, D. MacArthur & Associates, 30-Nov-15 (in AFM pack).
+// VH-XTN weighing report WB-6071, D. MacArthur & Associates, 30-Nov-15 (in AFM pack):
+// 556.0 kg, arm 265.7 mm, 147753 kg·mm. The printed arm is rounded, so the arm is
+// taken from the moment (147753 / 556.0 = 265.74 mm) to reproduce it exactly.
 export const VH_XTN: Aircraft = {
   id: 'vh-xtn',
   registration: 'VH-XTN',
   emptyMassKg: 556.0,
-  emptyArmM: 0.2657,
+  emptyArmM: 147.753 / 556.0,
+  dataRev: 2,
   fuelSystem: 'type2',
   idle1000Rpm: false,
   notes: 'S/N 00054. Weighing WB-6071, 30-Nov-15: 556.0 kg @ 265.7 mm (147753 kg·mm). MT propeller.',
@@ -54,6 +57,7 @@ export const VH_HUU: Aircraft = {
   registration: 'VH-HUU',
   emptyMassKg: 548.5,
   emptyArmM: 130.578 / 548.5,
+  dataRev: 1,
   fuelSystem: 'type2',
   idle1000Rpm: false,
   notes:
@@ -61,6 +65,19 @@ export const VH_HUU: Aircraft = {
 };
 
 const BUILT_IN_AIRCRAFT = [VH_XTN, VH_HUU];
+
+/**
+ * Bring saved aircraft up to date with the built-in data: built-in aircraft
+ * with a newer dataRev replace older saved copies, and built-in aircraft
+ * missing from the saved list are added. Other aircraft are kept as saved.
+ */
+export function mergeBuiltInAircraft(saved: Aircraft[]): Aircraft[] {
+  const updated = saved.map((a) => {
+    const built = BUILT_IN_AIRCRAFT.find((b) => b.id === a.id);
+    return built && (a.dataRev ?? 0) < (built.dataRev ?? 0) ? built : a;
+  });
+  return [...updated, ...BUILT_IN_AIRCRAFT.filter((b) => !saved.some((a) => a.id === b.id))];
+}
 
 const aerodrome: Aerodrome = {
   elevationFt: 0,
@@ -103,7 +120,7 @@ function load(): AppState {
       departure: { ...DEFAULT_STATE.departure, ...s.departure },
       arrival: { ...DEFAULT_STATE.arrival, ...s.arrival },
       // Add built-in aircraft that were introduced after this state was saved.
-      aircraft: [...s.aircraft, ...BUILT_IN_AIRCRAFT.filter((a) => !s.aircraft.some((x) => x.id === a.id))],
+      aircraft: mergeBuiltInAircraft(s.aircraft),
     };
   } catch {
     return DEFAULT_STATE;
