@@ -1,6 +1,6 @@
 import { MAX_TAKEOFF_KG } from '../lib/afm';
 import { densityAltitudeFt, pressureAltitudeFt, windComponents } from '../lib/atmos';
-import { FACTOR_SOURCE, type Surface, SURFACE_SOURCE, SURFACES } from '../lib/factors';
+import { FACTOR_SOURCE, type Surface, SURFACE_SOURCE, SURFACE_URL, SURFACES } from '../lib/factors';
 import { fmtDist, fmtFt, fmtMass } from '../lib/format';
 import { computePerformance } from '../lib/performance';
 import type { Aircraft, WBResult } from '../lib/wb';
@@ -42,6 +42,13 @@ function SurfaceSelect({ value, onChange }: { value: Surface; onChange: (s: Surf
           </option>
         ))}
       </select>
+      <span className="mt-1 block text-xs text-slate-500">
+        Factors from{' '}
+        <a href={SURFACE_URL} target="_blank" rel="noreferrer" className="text-sky-700 underline">
+          UK CAA Safety Sense 09, Weight, balance and performance (Aug 2024), p. 15
+        </a>
+        . The DA20-C1 AFM has no grass data.
+      </span>
     </label>
   );
 }
@@ -96,6 +103,18 @@ export function Performance(props: {
         <AerodromeFields a={dep} set={(d) => setState((s) => ({ ...s, departure: d }))} availableLabel="TODA" />
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <NumberField label="Obstacle height" value={dep.obstacleFt} onChange={(v) => setState((s) => ({ ...s, departure: { ...s.departure, obstacleFt: v } }))} unit="ft" decimals={0} hint="For info only: TODR always uses 50 ft. Chart max 49 ft (15 m)" />
+        </div>
+        <div className="mt-3">
+          <Checkbox
+            label="Ignore headwind component (no headwind credit, for extra safety)"
+            checked={state.ignoreHeadwind}
+            onChange={(v) => setState((s) => ({ ...s, ignoreHeadwind: v }))}
+          />
+          <p className="ml-6 mt-0.5 text-xs text-slate-500">
+            {perf.headwindIgnored
+              ? `Take-off calculated with 0 kt instead of the ${perf.depHeadwindKt.toFixed(1)} kt headwind. A tailwind is always applied.`
+              : 'A tailwind is always applied.'}
+          </p>
         </div>
         <Atmos a={dep} />
         <p className="mt-2 text-xs text-slate-500">Take-off mass from W&amp;B: {fmtMass(wb.takeoff.massKg, state.units)}</p>
@@ -157,8 +176,11 @@ export function Performance(props: {
           </tbody>
         </table>
         <p className="mt-3 text-sm text-slate-700">
-          Runway surface factors ({SURFACE_SOURCE}, Aug 2024), applied to the AFM distance before the factor above. The
-          DA20-C1 AFM gives none.
+          Runway surface factors from{' '}
+          <a href={SURFACE_URL} target="_blank" rel="noreferrer" className="text-sky-700 underline">
+            UK {SURFACE_SOURCE} (Aug 2024), p. 15
+          </a>
+          , applied to the AFM distance before the factor above. The DA20-C1 AFM gives none.
         </p>
         <table className="mt-2 w-full text-sm tabular-nums">
           <thead>

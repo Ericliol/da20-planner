@@ -30,3 +30,39 @@ describe('TODR / LDR with surface factors', () => {
     expect(p.todr).toBeCloseTo(paved.todr);
   });
 });
+
+describe('ignore headwind component', () => {
+  const wb = computeWB(VH_XTN, DEFAULT_STATE.loading);
+  const withWind = (dir: number, ignore: boolean) =>
+    computePerformance(
+      { ...DEFAULT_STATE, ignoreHeadwind: ignore, departure: { ...DEFAULT_STATE.departure, windDirDeg: dir, windKt: 10 } },
+      VH_XTN,
+      wb,
+    );
+  const calm = computePerformance(DEFAULT_STATE, VH_XTN, wb);
+
+  it('is on by default', () => expect(DEFAULT_STATE.ignoreHeadwind).toBe(true));
+
+  it('gives no credit for a headwind when ticked', () => {
+    const p = withWind(0, true); // runway 000, wind 000 at 10 kt = 10 kt headwind
+    expect(p.headwindIgnored).toBe(true);
+    expect(p.depWindUsedKt).toBe(0);
+    expect(p.todr).toBeCloseTo(calm.todr);
+  });
+
+  it('credits the headwind when unticked', () => {
+    expect(withWind(0, false).todr).toBeLessThan(calm.todr);
+  });
+
+  it('always applies a tailwind', () => {
+    const p = withWind(180, true); // 10 kt tailwind... beyond the chart's 5 kt
+    expect(p.toError).not.toBe('');
+    const tw = computePerformance(
+      { ...DEFAULT_STATE, ignoreHeadwind: true, departure: { ...DEFAULT_STATE.departure, windDirDeg: 180, windKt: 4 } },
+      VH_XTN,
+      wb,
+    );
+    expect(tw.headwindIgnored).toBe(false);
+    expect(tw.todr).toBeGreaterThan(calm.todr);
+  });
+});

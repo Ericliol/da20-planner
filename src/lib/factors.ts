@@ -30,3 +30,4 @@ export const SURFACES = {
 } as const;
 export type Surface = keyof typeof SURFACES;
 export const SURFACE_SOURCE = 'CAA Safety Sense 09';
+export const SURFACE_URL = 'https://www.caa.co.uk/media/wcebqozv/ssl09-caa-safety-sense-weight-balance-and-performance.pdf';

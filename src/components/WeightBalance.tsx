@@ -270,7 +270,11 @@ function PrintPerformance({ perf }: { perf: PerformanceResult }) {
   const rows: { k: string; d: ReactNode; a: ReactNode }[] = [
     { k: 'Elevation / PA', d: `${Math.round(dep.elevationFt)} ft / ${Math.round(perf.depPaFt)} ft`, a: `${Math.round(arr.elevationFt)} ft / ${Math.round(perf.arrPaFt)} ft` },
     { k: 'QNH / OAT', d: `${dep.qnhHpa} hPa / ${dep.oatC} °C`, a: `${arr.qnhHpa} hPa / ${arr.oatC} °C` },
-    { k: 'Runway wind', d: wind(perf.depHeadwindKt), a: wind(perf.arrHeadwindKt) },
+    {
+      k: 'Runway wind',
+      d: perf.headwindIgnored ? `${wind(perf.depHeadwindKt)} (not credited)` : wind(perf.depHeadwindKt),
+      a: wind(perf.arrHeadwindKt),
+    },
     { k: 'Ground roll (AFM)', d: to ? dist(to.groundRoll) : '-', a: dist(perf.ld.groundRoll) },
     { k: 'AFM distance to / from 50 ft', d: to ? dist(to.total) : '-', a: dist(perf.ld.over50ft) },
     { k: 'Surface', d: `${SURFACES[dep.surface].label} × ${perf.toSurfaceFactor.toFixed(2)}`, a: `${SURFACES[arr.surface].label} × ${perf.ldSurfaceFactor.toFixed(2)}` },

@@ -29,6 +29,8 @@ export interface AppState {
   arrival: Aerodrome & { sameAsDeparture: boolean };
   /** Multiplier applied to required distances (school / personal SOP). */
   marginFactor: number;
+  /** Take-off: give no credit for a headwind (tailwind is always applied). */
+  ignoreHeadwind: boolean;
 }
 
 // VH-XTN weighing report WB-6071, D. MacArthur & Associates, 30-Nov-15 (in AFM pack).
@@ -78,6 +80,7 @@ export const DEFAULT_STATE: AppState = {
   departure: { ...aerodrome, obstacleFt: 50 },
   arrival: { ...aerodrome, sameAsDeparture: true },
   marginFactor: 1,
+  ignoreHeadwind: true,
 };
 
 const KEY = 'da20-planner:v1';

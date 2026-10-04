@@ -20,6 +20,9 @@ export interface PerformanceResult {
   extra: number;
   depPaFt: number;
   depHeadwindKt: number;
+  /** Wind actually used for the take-off chart (headwind removed when ignored). */
+  depWindUsedKt: number;
+  headwindIgnored: boolean;
   /** Take-off to 50 ft: the TODR basis. */
   to50: TakeoffResult | null;
   /** Take-off to the obstacle height entered. */
@@ -47,11 +50,14 @@ export function computePerformance(state: AppState, aircraft: Aircraft, wb: WBRe
   // ---- take-off ----
   const depPaFt = pressureAltitudeFt(departure.elevationFt, departure.qnhHpa);
   const depHeadwindKt = windComponents(departure.runwayHeadingDeg, departure.windDirDeg, departure.windKt).headwind;
+  // Optionally take no credit for headwind; a tailwind always counts.
+  const headwindIgnored = state.ignoreHeadwind && depHeadwindKt > 0;
+  const depWindUsedKt = headwindIgnored ? 0 : depHeadwindKt;
   let to: TakeoffResult | null = null;
   let to50: TakeoffResult | null = null;
   let toError = '';
   try {
-    const input = { pressureAltitudeFt: depPaFt, oatC: departure.oatC, massKg: wb.takeoff.massKg, windKt: depHeadwindKt };
+    const input = { pressureAltitudeFt: depPaFt, oatC: departure.oatC, massKg: wb.takeoff.massKg, windKt: depWindUsedKt };
     // TODR is always based on the distance to 50 ft (chart top, 15 m).
     to50 = takeoffDistance({ ...input, obstacleM: 15 });
     to = takeoffDistance({ ...input, obstacleM: departure.obstacleFt / FT_PER_M });
@@ -85,6 +91,8 @@ export function computePerformance(state: AppState, aircraft: Aircraft, wb: WBRe
     extra,
     depPaFt,
     depHeadwindKt,
+    depWindUsedKt,
+    headwindIgnored,
     to50,
     to,
     toError,
