@@ -20,7 +20,12 @@ interface Panel {
   curves: Curve[];
   dashed?: Curve[];
   path: [number, number][];
+  /** Support lines: vertical from the axis value up to the curve, horizontal from there to the next panel. */
+  vline: [number, number];
+  hline: [number, number];
 }
+
+const clampD = (d: number) => Math.min(1000, Math.max(200, d));
 
 function range(a: number, b: number, n = 24) {
   return Array.from({ length: n + 1 }, (_, i) => a + ((b - a) * i) / n);
@@ -43,6 +48,8 @@ export function Nomogram({ r }: { r: TakeoffResult }) {
           return [];
         }
       }),
+      vline: [u.oatC, r.base],
+      hline: [u.oatC, r.base],
     },
     {
       title: 'Weight kg',
@@ -50,6 +57,8 @@ export function Nomogram({ r }: { r: TakeoffResult }) {
       ticks: [800, 750, 700, 650, 600],
       curves: TAKEOFF_CHART.weight,
       path: range(800, u.massKg).map((w) => [w, followGuides(TAKEOFF_CHART.weight, 800, w, r.base)]),
+      vline: [u.massKg, r.afterWeight],
+      hline: [u.massKg, r.afterWeight],
     },
     {
       title: 'Wind kt',
@@ -61,6 +70,9 @@ export function Nomogram({ r }: { r: TakeoffResult }) {
         u.windKt >= 0
           ? [[-5, r.afterWeight] as [number, number], ...range(0, u.windKt).map((w) => [w, followGuides(TAKEOFF_CHART.headwind, 0, w, r.afterWeight)] as [number, number]), [20, r.afterWind]]
           : [[-5, r.afterWeight] as [number, number], ...range(u.windKt, 0).map((w) => [w, followGuides(TAKEOFF_CHART.tailwind, u.windKt, w, r.afterWeight)] as [number, number]), [20, r.afterWind]],
+      // Tailwind: enter at the tailwind value, follow the dashed line up to the 0 kt line.
+      vline: [u.windKt, u.windKt >= 0 ? r.afterWind : r.afterWeight],
+      hline: [Math.max(0, u.windKt), r.afterWind],
     },
     {
       title: 'Obstacle m',
@@ -68,6 +80,8 @@ export function Nomogram({ r }: { r: TakeoffResult }) {
       ticks: [0, 5, 10, 15],
       curves: TAKEOFF_CHART.obstacle,
       path: range(0, u.obstacleM).map((h) => [h, followGuides(TAKEOFF_CHART.obstacle, 0, h, r.afterWind)]),
+      vline: [u.obstacleM, r.total],
+      hline: [u.obstacleM, r.total],
     },
   ];
   const W = PAD.l + panels.length * PW + (panels.length - 1) * GAP + 8;
@@ -85,7 +99,7 @@ export function Nomogram({ r }: { r: TakeoffResult }) {
       {panels.map((p, i) => {
         const x0 = PAD.l + i * (PW + GAP);
         const sx = (v: number) => x0 + ((v - p.domain[0]) / (p.domain[1] - p.domain[0])) * PW;
-        const line = (c: [number, number][]) => c.map(([v, d]) => `${sx(v).toFixed(1)},${sy(Math.min(1000, Math.max(200, d))).toFixed(1)}`).join(' ');
+        const line = (c: [number, number][]) => c.map(([v, d]) => `${sx(v).toFixed(1)},${sy(clampD(d)).toFixed(1)}`).join(' ');
         return (
           <g key={p.title}>
             <rect x={x0} y={PAD.t} width={PW} height={H - PAD.t - PAD.b} fill="#fff" stroke="#94a3b8" />
@@ -110,6 +124,20 @@ export function Nomogram({ r }: { r: TakeoffResult }) {
               <polyline key={`d${j}`} points={line(c)} fill="none" stroke="#94a3b8" strokeWidth="0.8" strokeDasharray="3 2" />
             ))}
             <polyline points={line(p.path)} fill="none" stroke="#e11d48" strokeWidth="2" />
+            {/* support lines for the turning point */}
+            <g stroke="#e11d48" strokeWidth="0.9" strokeDasharray="4 2.5">
+              <line x1={sx(p.vline[0])} x2={sx(p.vline[0])} y1={H - PAD.b} y2={sy(clampD(p.vline[1]))} />
+              <line
+                x1={sx(p.hline[0])}
+                x2={x0 + PW + (i < panels.length - 1 ? GAP : 0)}
+                y1={sy(clampD(p.hline[1]))}
+                y2={sy(clampD(p.hline[1]))}
+              />
+            </g>
+            <circle cx={sx(p.hline[0])} cy={sy(clampD(p.hline[1]))} r="2.6" fill="#e11d48" />
+            <text x={x0 + PW - 3} y={sy(clampD(p.hline[1])) - 4} textAnchor="end" fontSize="9" fontWeight="700" fill="#be123c">
+              {Math.round(p.hline[1])} m
+            </text>
           </g>
         );
       })}
