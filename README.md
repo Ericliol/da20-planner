@@ -58,4 +58,6 @@ python tools/extract_takeoff.py "../DA20-C1 AFM & Supp.pdf" src/data/takeoff.jso
 - **Runway surface:** the DA20-C1 AFM has no grass data, so surface factors come from UK CAA Safety Sense 09
   *Weight, balance and performance* (Aug 2024). Take-off / landing factors: dry grass (up to 20 cm) ×1.2 / ×1.15,
   wet grass ×1.3 / ×1.35, wet paved – / ×1.15, soft ground or snow ×1.25 / ×1.25. They are applied before the
-  CAO 20.7.4 factor: TODR = AFM × surface × 1.15.
+  CAO 20.7.4 factor.
+- **Runway slope:** same leaflet, p. 13: ×1.1 per 2% uphill for take-off and per 2% downhill for landing
+  (1.1^(slope/2); no credit the other way). TODR = AFM × surface × slope × 1.15.

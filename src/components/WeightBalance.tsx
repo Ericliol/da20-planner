@@ -203,7 +203,7 @@ export function WeightBalance(props: {
       <PrintPerformance perf={perf} />
       <p className="hidden text-[9px] text-slate-500 print:order-3 print:col-span-2 print:block">
         Training aid only. Calculated from the DA20-C1 AFM (DOC # DA202-C1) Fig 6.7 / 6.8 and the aircraft's weighing
-        report. TODR / LDR = AFM × surface factor (CAA Safety Sense 09) × CAO 20.7.4 factor. Cross-check against the AFM. The pilot in command is responsible for the loading and performance of the aircraft.
+        report. TODR / LDR = AFM × surface × slope (CAA Safety Sense 09) × CAO 20.7.4 factor. Cross-check against the AFM. The pilot in command is responsible for the loading and performance of the aircraft.
       </p>
     </div>
   );
@@ -267,6 +267,7 @@ function PrintPerformance({ perf }: { perf: PerformanceResult }) {
     </span>
   );
   const to = perf.to50;
+  const slope = (pct: number, f: number) => `${pct === 0 ? 'level' : `${Math.abs(pct)}% ${pct > 0 ? 'up' : 'down'}`} × ${f.toFixed(2)}`;
   const rows: { k: string; d: ReactNode; a: ReactNode }[] = [
     { k: 'Elevation / PA', d: `${Math.round(dep.elevationFt)} ft / ${Math.round(perf.depPaFt)} ft`, a: `${Math.round(arr.elevationFt)} ft / ${Math.round(perf.arrPaFt)} ft` },
     { k: 'QNH / OAT', d: `${dep.qnhHpa} hPa / ${dep.oatC} °C`, a: `${arr.qnhHpa} hPa / ${arr.oatC} °C` },
@@ -278,6 +279,7 @@ function PrintPerformance({ perf }: { perf: PerformanceResult }) {
     { k: 'Ground roll (AFM)', d: to ? dist(to.groundRoll) : '-', a: dist(perf.ld.groundRoll) },
     { k: 'AFM distance to / from 50 ft', d: to ? dist(to.total) : '-', a: dist(perf.ld.over50ft) },
     { k: 'Surface', d: `${SURFACES[dep.surface].label} × ${perf.toSurfaceFactor.toFixed(2)}`, a: `${SURFACES[arr.surface].label} × ${perf.ldSurfaceFactor.toFixed(2)}` },
+    { k: 'Slope', d: slope(dep.slopePct, perf.toSlopeFactor), a: slope(arr.slopePct, perf.ldSlopeFactor) },
     { k: `Factor (${FACTOR_SOURCE})`, d: factor(perf.toFactor), a: factor(perf.ldFactor) },
     { k: 'TODR / LDR', d: to ? <b>{dist(perf.todr)}</b> : '-', a: <b>{dist(perf.ldr)}</b> },
     { k: 'TODA / LDA', d: fmtDist(dep.availableM), a: fmtDist(arr.availableM) },

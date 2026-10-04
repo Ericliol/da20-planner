@@ -17,6 +17,8 @@ export interface Aerodrome {
   /** Runway length available (m): TODA for departure, LDA for arrival. */
   availableM: number;
   surface: Surface;
+  /** Runway slope in the direction of travel, %: + uphill, - downhill. */
+  slopePct: number;
 }
 
 export interface AppState {
@@ -69,6 +71,7 @@ const aerodrome: Aerodrome = {
   windKt: 0,
   availableM: 1000,
   surface: 'paved-dry',
+  slopePct: 0,
 };
 
 export const DEFAULT_STATE: AppState = {

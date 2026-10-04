@@ -20,6 +20,13 @@ function AerodromeFields<T extends Aerodrome>({ a, set, availableLabel }: { a: T
       <NumberField label="Wind speed" value={a.windKt} onChange={f('windKt')} unit="kt" decimals={0} />
       <NumberField label={availableLabel} value={a.availableM} onChange={f('availableM')} unit="m" decimals={0} />
       <SurfaceSelect value={a.surface} onChange={(surface) => set({ ...a, surface })} />
+      <NumberField
+        label="Runway slope"
+        value={a.slopePct}
+        onChange={f('slopePct')}
+        unit="%"
+        hint="+ uphill / − downhill in the runway direction above"
+      />
     </div>
   );
 }
@@ -94,8 +101,8 @@ export function Performance(props: {
   const ldReq = perf.ldr;
   const ldOk = perf.ldOk;
   const otherObstacle = Math.abs(dep.obstacleFt - 50) > 0.5;
-  const factorLabel = (f: number, surface: number) =>
-    `${surface !== 1 ? `× ${surface.toFixed(2)} surface ` : ''}× ${f.toFixed(2)} ${FACTOR_SOURCE}${extra !== 1 ? ` × ${extra} extra` : ''}`;
+  const factorLabel = (f: number, surface: number, slope: number) =>
+    `${surface !== 1 ? `× ${surface.toFixed(2)} surface ` : ''}${slope !== 1 ? `× ${slope.toFixed(2)} slope ` : ''}× ${f.toFixed(2)} ${FACTOR_SOURCE}${extra !== 1 ? ` × ${extra} extra` : ''}`;
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -122,7 +129,7 @@ export function Performance(props: {
           <div className="mt-3 grid grid-cols-2 gap-3">
             <Big label="Ground roll (lift-off)" value={fmtDist(to50.groundRoll)} sub={fmtFt(to50.groundRoll)} />
             <Big label="AFM distance to 50 ft" value={fmtDist(to50.total)} sub={fmtFt(to50.total)} />
-            <Big label={`TODR ${factorLabel(toFactor, perf.toSurfaceFactor)}`} value={fmtDist(toReq)} sub={fmtFt(toReq)} tone={toOk ? 'ok' : 'bad'} />
+            <Big label={`TODR ${factorLabel(toFactor, perf.toSurfaceFactor, perf.toSlopeFactor)}`} value={fmtDist(toReq)} sub={fmtFt(toReq)} tone={toOk ? 'ok' : 'bad'} />
             <Big label="TODA" value={fmtDist(dep.availableM)} sub={`margin ${fmtDist(dep.availableM - toReq)}`} tone={toOk ? 'ok' : 'bad'} />
             {otherObstacle && (
               <Big label={`AFM distance to ${Math.round(dep.obstacleFt)} ft obstacle`} value={fmtDist(to.total)} sub={`${fmtFt(to.total)} · unfactored`} />
@@ -143,7 +150,8 @@ export function Performance(props: {
         {state.arrival.sameAsDeparture ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <NumberField label="LDA" value={state.arrival.availableM} onChange={(v) => setState((s) => ({ ...s, arrival: { ...s.arrival, availableM: v } }))} unit="m" decimals={0} />
-            <div className="col-span-2 self-end pb-2 text-xs text-slate-500">Surface: {SURFACES[dep.surface].label} (same as departure)</div>
+            <div className="col-span-2 self-end pb-2 text-xs text-slate-500">Surface: {SURFACES[dep.surface].label}, slope {dep.slopePct > 0 ? '+' : ''}
+              {dep.slopePct}% (same as departure)</div>
           </div>
         ) : (
           <AerodromeFields a={state.arrival} set={(a) => setState((s) => ({ ...s, arrival: a }))} availableLabel="LDA" />
@@ -152,7 +160,7 @@ export function Performance(props: {
         <div className="mt-3 grid grid-cols-2 gap-3">
           <Big label="Ground roll" value={fmtDist(ld.groundRoll)} sub={fmtFt(ld.groundRoll)} />
           <Big label="AFM distance from 50 ft" value={fmtDist(ld.over50ft)} sub={fmtFt(ld.over50ft)} />
-          <Big label={`LDR ${factorLabel(ldFactor, perf.ldSurfaceFactor)}`} value={fmtDist(ldReq)} sub={fmtFt(ldReq)} tone={ldOk ? 'ok' : 'bad'} />
+          <Big label={`LDR ${factorLabel(ldFactor, perf.ldSurfaceFactor, perf.ldSlopeFactor)}`} value={fmtDist(ldReq)} sub={fmtFt(ldReq)} tone={ldOk ? 'ok' : 'bad'} />
           <Big label="LDA" value={fmtDist(arr.availableM)} sub={`margin ${fmtDist(arr.availableM - ldReq)}`} tone={ldOk ? 'ok' : 'bad'} />
         </div>
         <Messages notes={ldNotes} />
@@ -201,6 +209,10 @@ export function Performance(props: {
           </tbody>
         </table>
         <p className="mt-1 text-xs text-slate-500">Grass longer than 20 cm isn't covered: expect much more.</p>
+        <p className="mt-3 text-sm text-slate-700">
+          Runway slope ({SURFACE_SOURCE} p. 13): × 1.1 for every 2% uphill on take-off and every 2% downhill on landing (no
+          credit the other way). Current: take-off × {perf.toSlopeFactor.toFixed(2)}, landing × {perf.ldSlopeFactor.toFixed(2)}.
+        </p>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <NumberField
             label="Extra margin (on top)"

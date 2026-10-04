@@ -66,3 +66,22 @@ describe('ignore headwind component', () => {
     expect(tw.todr).toBeGreaterThan(calm.todr);
   });
 });
+
+describe('runway slope', () => {
+  const wb = computeWB(VH_XTN, DEFAULT_STATE.loading);
+  const calm = computePerformance(DEFAULT_STATE, VH_XTN, wb);
+  const sloped = (pct: number) =>
+    computePerformance({ ...DEFAULT_STATE, departure: { ...DEFAULT_STATE.departure, slopePct: pct } }, VH_XTN, wb);
+
+  it('2% uphill: take-off x1.1, landing unchanged (same runway direction)', () => {
+    const p = sloped(2);
+    expect(p.todr).toBeCloseTo(calm.todr * 1.1);
+    expect(p.ldr).toBeCloseTo(calm.ldr);
+  });
+
+  it('2% downhill: landing x1.1, take-off unchanged', () => {
+    const p = sloped(-2);
+    expect(p.todr).toBeCloseTo(calm.todr);
+    expect(p.ldr).toBeCloseTo(calm.ldr * 1.1);
+  });
+});

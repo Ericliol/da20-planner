@@ -1,7 +1,7 @@
 import type { AppState } from '../state';
 import { FT_PER_M, MAX_TAKEOFF_KG } from './afm';
 import { isaTempC, pressureAltitudeFt, windComponents } from './atmos';
-import { landingFactor, SURFACES, takeoffFactor } from './factors';
+import { landingFactor, landingSlopeFactor, SURFACES, takeoffFactor, takeoffSlopeFactor } from './factors';
 import { OutOfChartError } from './interp';
 import { landingDistance, type LandingResult } from './landing';
 import { takeoffDistance, type TakeoffResult } from './takeoff';
@@ -17,6 +17,9 @@ export interface PerformanceResult {
   /** Runway surface factors (CAA Safety Sense 09). */
   toSurfaceFactor: number;
   ldSurfaceFactor: number;
+  /** Runway slope factors (CAA Safety Sense 09 p. 13). */
+  toSlopeFactor: number;
+  ldSlopeFactor: number;
   extra: number;
   depPaFt: number;
   depHeadwindKt: number;
@@ -65,7 +68,8 @@ export function computePerformance(state: AppState, aircraft: Aircraft, wb: WBRe
     toError = e instanceof OutOfChartError ? e.message : String(e);
   }
   const toSurfaceFactor = SURFACES[departure.surface].takeoff;
-  const todr = to50 ? to50.total * toSurfaceFactor * toFactor * extra : 0;
+  const toSlopeFactor = takeoffSlopeFactor(departure.slopePct);
+  const todr = to50 ? to50.total * toSurfaceFactor * toSlopeFactor * toFactor * extra : 0;
   const toOk = to50 ? todr <= departure.availableM : false;
 
   // ---- landing ----
@@ -73,7 +77,8 @@ export function computePerformance(state: AppState, aircraft: Aircraft, wb: WBRe
   const arrHeadwindKt = windComponents(arrival.runwayHeadingDeg, arrival.windDirDeg, arrival.windKt).headwind;
   const ld = landingDistance(arrPaFt, aircraft.idle1000Rpm);
   const ldSurfaceFactor = SURFACES[arrival.surface].landing;
-  const ldr = ld.over50ft * ldSurfaceFactor * ldFactor * extra;
+  const ldSlopeFactor = landingSlopeFactor(arrival.slopePct);
+  const ldr = ld.over50ft * ldSurfaceFactor * ldSlopeFactor * ldFactor * extra;
   const ldOk = ldr <= arrival.availableM;
   const ldNotes = [...ld.notes];
   if (arrival.oatC > isaTempC(arrPaFt) + 0.5)
@@ -88,6 +93,8 @@ export function computePerformance(state: AppState, aircraft: Aircraft, wb: WBRe
     ldFactor,
     toSurfaceFactor,
     ldSurfaceFactor,
+    toSlopeFactor,
+    ldSlopeFactor,
     extra,
     depPaFt,
     depHeadwindKt,

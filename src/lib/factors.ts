@@ -30,4 +30,13 @@ export const SURFACES = {
 } as const;
 export type Surface = keyof typeof SURFACES;
 export const SURFACE_SOURCE = 'CAA Safety Sense 09';
+/**
+ * Runway slope factors, CAA Safety Sense 09 (Aug 2024) p. 13: for every 2% slope,
+ * uphill take-off x1.1 and downhill landing x1.1; the leaflet multiplies factors
+ * together, hence 1.1^(slope / 2). No credit for downhill take-off or uphill landing.
+ * slopePct: + uphill / - downhill in the direction of travel.
+ */
+export const takeoffSlopeFactor = (slopePct: number) => (slopePct > 0 ? Math.pow(1.1, slopePct / 2) : 1);
+export const landingSlopeFactor = (slopePct: number) => (slopePct < 0 ? Math.pow(1.1, -slopePct / 2) : 1);
+
 export const SURFACE_URL = 'https://www.caa.co.uk/media/wcebqozv/ssl09-caa-safety-sense-weight-balance-and-performance.pdf';
