@@ -1,5 +1,5 @@
 import { MAX_TAKEOFF_KG } from '../lib/afm';
-import { densityAltitudeFt, isaTempC, pressureAltitudeFt, windComponents } from '../lib/atmos';
+import { densityAltitudeFt, ISA_TEMP_C, pressureAltitudeFt, windComponents } from '../lib/atmos';
 import { FACTOR_SOURCE, FACTOR_URL, type Surface, SURFACE_SOURCE, SURFACE_URL, SURFACES } from '../lib/factors';
 import { fmtDist, fmtFt, fmtMass } from '../lib/format';
 import { computePerformance } from '../lib/performance';
@@ -62,7 +62,7 @@ function SurfaceSelect({ value, onChange }: { value: Surface; onChange: (s: Surf
 
 function Atmos({ a }: { a: Aerodrome }) {
   const pa = pressureAltitudeFt(a.elevationFt, a.qnhHpa);
-  const isa = isaTempC(pa);
+  const isa = ISA_TEMP_C;
   const da = densityAltitudeFt(pa, a.oatC);
   const w = windComponents(a.runwayHeadingDeg, a.windDirDeg, a.windKt);
   const angle = ((((a.windDirDeg - a.runwayHeadingDeg) % 360) + 540) % 360) - 180;
@@ -93,24 +93,16 @@ function Atmos({ a }: { a: Aerodrome }) {
         <summary className="cursor-pointer select-none font-medium text-sky-700">Show working</summary>
         <div className="mt-2 space-y-2 rounded-lg bg-slate-50 p-3 font-mono leading-relaxed tabular-nums">
           <div>
-            <div className="font-sans font-semibold text-slate-700">Pressure altitude (ISA formula)</div>
-            PA = elevation + 145,366 × (1 − (QNH ÷ 1013.25)^0.190284)
-            <br />= {n(a.elevationFt)} + 145,366 × (1 − ({a.qnhHpa} ÷ 1013.25)^0.190284)
-            <br />= {n(a.elevationFt)} + {n(pa - a.elevationFt, 1)} = <b>{n(pa)} ft</b>
-            <br />
-            <span className="font-sans text-slate-500">
-              Rule of thumb: elevation + (1013 − QNH) × 30 = {n(a.elevationFt)} + {n((1013 - a.qnhHpa) * 30)} ={' '}
-              {n(a.elevationFt + (1013 - a.qnhHpa) * 30)} ft. The exact formula uses 1013.25 hPa, which is why QNH 1013
-              gives a few feet.
-            </span>
+            <div className="font-sans font-semibold text-slate-700">Pressure altitude</div>
+            PA = elevation + (1013 − QNH) × 30
+            <br />= {n(a.elevationFt)} + (1013 − {a.qnhHpa}) × 30 = {n(a.elevationFt)} + {n((1013 - a.qnhHpa) * 30)} ={' '}
+            <b>{n(pa)} ft</b>
           </div>
           <div>
             <div className="font-sans font-semibold text-slate-700">Density altitude</div>
-            ISA temp = 15 − 1.98 × PA ÷ 1000 = 15 − 1.98 × {n(pa)} ÷ 1000 = {n(isa, 1)} °C
+            ISA deviation = OAT − 15 = {a.oatC} − 15 = {n(a.oatC - isa)} °C
             <br />
-            ISA deviation = OAT − ISA = {a.oatC} − {n(isa, 1)} = {n(a.oatC - isa, 1)} °C
-            <br />
-            DA = PA + 120 × ISA deviation = {n(pa)} + 120 × {n(a.oatC - isa, 1)} = <b>{n(da)} ft</b>
+            DA = PA + 120 × ISA deviation = {n(pa)} + 120 × {n(a.oatC - isa)} = <b>{n(da)} ft</b>
           </div>
           <div>
             <div className="font-sans font-semibold text-slate-700">Wind components</div>

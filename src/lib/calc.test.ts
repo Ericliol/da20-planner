@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ENVELOPE, IN_PER_M, LB_PER_KG } from './afm';
-import { windComponents } from './atmos';
+import { densityAltitudeFt, pressureAltitudeFt, windComponents } from './atmos';
 import { OutOfChartError } from './interp';
 import { landingDistance } from './landing';
 import { takeoffDistance } from './takeoff';
@@ -133,5 +133,17 @@ describe('wind components', () => {
     const w = windComponents(0, 30, 11);
     expect(w.headwind).toBeCloseTo(9.5, 0);
     expect(w.crosswind).toBeCloseTo(5.5, 0);
+  });
+});
+
+describe('pressure / density altitude (simplified)', () => {
+  it('PA = elevation + (1013 − QNH) × 30', () => {
+    expect(pressureAltitudeFt(0, 1013)).toBe(0);
+    expect(pressureAltitudeFt(65, 1003)).toBe(365);
+    expect(pressureAltitudeFt(1000, 1023)).toBe(700);
+  });
+  it('DA = PA + 120 × (OAT − 15)', () => {
+    expect(densityAltitudeFt(0, 15)).toBe(0);
+    expect(densityAltitudeFt(72, 22)).toBe(912);
   });
 });

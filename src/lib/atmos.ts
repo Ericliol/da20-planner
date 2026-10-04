@@ -1,16 +1,14 @@
-/** Pressure altitude from field elevation and QNH (hPa), ISA formula. */
+/** Pressure altitude: elevation + (1013 - QNH) x 30 ft per hPa (pilot rule of thumb). */
 export function pressureAltitudeFt(elevationFt: number, qnhHpa: number): number {
-  return elevationFt + 145366.45 * (1 - Math.pow(qnhHpa / 1013.25, 0.190284));
+  return elevationFt + (1013 - qnhHpa) * 30;
 }
 
-/** ISA temperature (°C) at a pressure altitude. */
-export function isaTempC(paFt: number): number {
-  return 15 - (1.98 * paFt) / 1000;
-}
+/** ISA temperature used here: 15 °C, without the 2 °C / 1000 ft lapse rate (simplification). */
+export const ISA_TEMP_C = 15;
 
-/** Density altitude, standard approximation. */
+/** Density altitude: PA + 120 ft per °C above ISA (15 °C). */
 export function densityAltitudeFt(paFt: number, oatC: number): number {
-  return paFt + 120 * (oatC - isaTempC(paFt));
+  return paFt + 120 * (oatC - ISA_TEMP_C);
 }
 
 /**

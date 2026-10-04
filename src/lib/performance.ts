@@ -1,6 +1,6 @@
 import type { AppState } from '../state';
 import { FT_PER_M, MAX_TAKEOFF_KG } from './afm';
-import { isaTempC, pressureAltitudeFt, windComponents } from './atmos';
+import { ISA_TEMP_C, pressureAltitudeFt, windComponents } from './atmos';
 import { landingFactor, landingSlopeFactor, SURFACES, takeoffFactor, takeoffSlopeFactor } from './factors';
 import { OutOfChartError } from './interp';
 import { landingDistance, type LandingResult } from './landing';
@@ -81,8 +81,8 @@ export function computePerformance(state: AppState, aircraft: Aircraft, wb: WBRe
   const ldr = ld.over50ft * ldSurfaceFactor * ldSlopeFactor * ldFactor * extra;
   const ldOk = ldr <= arrival.availableM;
   const ldNotes = [...ld.notes];
-  if (arrival.oatC > isaTempC(arrPaFt) + 0.5)
-    ldNotes.push(`OAT is ${Math.round(arrival.oatC - isaTempC(arrPaFt))} °C above ISA. The AFM landing table is for standard temperature only, so expect a longer distance.`);
+  if (arrival.oatC > ISA_TEMP_C + 0.5)
+    ldNotes.push(`OAT is ${Math.round(arrival.oatC - ISA_TEMP_C)} °C above ISA (15 °C). The AFM landing table is for standard temperature only, so expect a longer distance.`);
   if (arrHeadwindKt < -0.5) ldNotes.push('Tailwind component: the AFM landing table has no wind correction, so expect a longer distance.');
   if (wb.landing.massKg < 799) ldNotes.push('AFM landing data is for max weight (800 kg), so it is conservative at lower weights.');
 

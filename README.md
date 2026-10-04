@@ -43,6 +43,10 @@ python tools/extract_takeoff.py "../DA20-C1 AFM & Supp.pdf" src/data/takeoff.jso
 
 ## Interpretation notes
 
+- **Pressure altitude** = elevation + (1013 − QNH) × 30. **Density altitude** = PA + 120 × (OAT − 15), using ISA as
+  15 °C without the lapse rate (a simplification chosen for this app). The take-off chart is entered with PA and OAT
+  directly, so DA is for information only.
+
 - **Take-off chart:** the stages are pressure altitude/OAT → weight → wind → obstacle. Tailwind is read by
   entering at the tailwind value and following the dashed lines up to the 0 kt line.
 - The AFM worked example states **341 m**. Following the guide lines precisely gives about **352 m**, because the
