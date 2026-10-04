@@ -8,10 +8,8 @@ import { baseDistance, PA_CURVES_FT, TAKEOFF_CHART, type TakeoffResult } from '.
  */
 const PW = 150; // panel width
 const GAP = 22;
-const H = 300;
 const PAD = { l: 40, t: 22, b: 34 };
 const D = [200, 1000];
-const sy = (m: number) => PAD.t + ((D[1] - m) / (D[1] - D[0])) * (H - PAD.t - PAD.b);
 
 interface Panel {
   title: string;
@@ -48,7 +46,11 @@ function range(a: number, b: number, n = 24) {
   return Array.from({ length: n + 1 }, (_, i) => a + ((b - a) * i) / n);
 }
 
-export function Nomogram({ r }: { r: TakeoffResult }) {
+/** `height` sets the chart height in SVG units (default 300); the printed sheet uses a taller chart. */
+export function Nomogram({ r, height = 300 }: { r: TakeoffResult; height?: number }) {
+  const H = height;
+  const sy = (m: number) => PAD.t + ((D[1] - m) / (D[1] - D[0])) * (H - PAD.t - PAD.b);
+  const distTicks = H >= 450 ? [200, 300, 400, 500, 600, 700, 800, 900, 1000] : [200, 400, 600, 800, 1000];
   const u = r.used;
   const pa = u.pressureAltitudeFt;
 
@@ -109,7 +111,7 @@ export function Nomogram({ r }: { r: TakeoffResult }) {
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full min-w-[560px]" role="img" aria-label="Take-off distance chart with calculation path">
-      {[200, 400, 600, 800, 1000].map((m) => (
+      {distTicks.map((m) => (
         <text key={m} x={PAD.l - 5} y={sy(m) + 4} textAnchor="end" fontSize="10" fill="#64748b">
           {m}
         </text>

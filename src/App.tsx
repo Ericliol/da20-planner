@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AircraftDocuments } from './components/AircraftDocuments';
+import { PrintSheet } from './components/PrintSheet';
 import { AircraftEditor } from './components/AircraftEditor';
 import { Performance } from './components/Performance';
 import { StatusPill, Toggle } from './components/ui';
@@ -16,6 +17,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('W&B');
   const aircraft = state.aircraft.find((a) => a.id === state.selectedId) ?? state.aircraft[0];
   const wb = computeWB(aircraft, state.loading);
+  const perf = computePerformance(state, aircraft, wb);
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-16 print:px-0 print:pb-0">
@@ -43,6 +45,14 @@ export default function App() {
             </select>
             <Toggle label="Mass units" value={state.units.mass} options={['kg', 'lb'] as const} onChange={(mass) => setState((s) => ({ ...s, units: { ...s.units, mass } }))} />
             <Toggle label="Fuel units" value={state.units.fuel} options={['L', 'USG'] as const} onChange={(fuel) => setState((s) => ({ ...s, units: { ...s.units, fuel } }))} />
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700"
+              title="Print the load sheet: weight & balance and take-off / landing performance"
+            >
+              Print
+            </button>
           </div>
         </div>
         <nav className="no-print mt-3 flex gap-1" aria-label="Sections">
@@ -64,9 +74,9 @@ export default function App() {
         </nav>
       </header>
 
-      <main>
+      <main className="no-print">
         {tab === 'W&B' && (
-          <WeightBalance aircraft={aircraft} loading={state.loading} setLoading={(loading) => setState((s) => ({ ...s, loading }))} result={wb} units={state.units} perf={computePerformance(state, aircraft, wb)} />
+          <WeightBalance aircraft={aircraft} loading={state.loading} setLoading={(loading) => setState((s) => ({ ...s, loading }))} result={wb} units={state.units} />
         )}
         {tab === 'Performance' && <Performance state={state} setState={setState} aircraft={aircraft} wb={wb} />}
         {tab === 'Aircraft' && (
@@ -94,6 +104,8 @@ export default function App() {
           </div>
         )}
       </main>
+
+      <PrintSheet aircraft={aircraft} loading={state.loading} wb={wb} perf={perf} units={state.units} />
 
       <footer className="no-print mt-8 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-relaxed text-amber-900">
         <strong>Training aid only.</strong> Not an approved flight planning tool. Results come from the DA20-C1 AFM (DOC #

@@ -7,8 +7,5 @@ body { @apply bg-slate-50 text-slate-900; }
   @page { size: A4; margin: 12mm; }
   .no-print { display: none !important; }
   body { background: white; font-size: 11px; }
-  section { break-inside: avoid; box-shadow: none !important; }
-  /* Fit the whole load sheet on one A4 page. */
-  td { padding-top: 3px !important; padding-bottom: 3px !important; }
-  .print-chart { display: block; width: 100%; margin: 0 auto; }
+  .print-break { break-before: page; }
 }
