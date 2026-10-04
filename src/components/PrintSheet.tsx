@@ -43,7 +43,9 @@ export function PrintSheet(props: { aircraft: Aircraft; loading: Loading; wb: WB
         <h2 className="mt-3 mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
           Weight &amp; moment (AFM Fig 6.8): {wb.ok ? 'within limits' : 'OUT OF LIMITS'}
         </h2>
-        <Envelope points={points} units={units} />
+        <div className="print-fixed-chart" style={{ height: '115mm' }}>
+          <Envelope points={points} units={units} />
+        </div>
         {wb.errors.length > 0 && <p className="mt-1 text-[10px] font-semibold text-red-700">{wb.errors.join(' ')}</p>}
       </section>
 
@@ -58,8 +60,8 @@ export function PrintSheet(props: { aircraft: Aircraft; loading: Loading; wb: WB
           Take-off distance to 50 ft (AFM Fig 5.4)
         </h2>
         {perf.to50 ? (
-          <div className="break-inside-avoid">
-            <Nomogram r={perf.to50} height={430} />
+          <div className="print-fixed-chart break-inside-avoid" style={{ height: '85mm' }}>
+            <Nomogram r={perf.to50} height={340} />
           </div>
         ) : (
           <p className="text-[11px] font-semibold text-red-700">{perf.toError}</p>
