@@ -10,5 +10,5 @@ body { @apply bg-slate-50 text-slate-900; }
   section { break-inside: avoid; box-shadow: none !important; }
   /* Fit the whole load sheet on one A4 page. */
   td { padding-top: 3px !important; padding-bottom: 3px !important; }
-  .print-chart { display: block; width: 58%; margin: 0 auto; }
+  .print-chart { display: block; width: 100%; margin: 0 auto; }
 }

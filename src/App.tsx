@@ -3,6 +3,7 @@ import { AircraftEditor } from './components/AircraftEditor';
 import { Performance } from './components/Performance';
 import { StatusPill, Toggle } from './components/ui';
 import { WeightBalance } from './components/WeightBalance';
+import { computePerformance } from './lib/performance';
 import { computeWB } from './lib/wb';
 import { DEFAULT_STATE, usePersistentState } from './state';
 
@@ -64,7 +65,7 @@ export default function App() {
 
       <main>
         {tab === 'W&B' && (
-          <WeightBalance aircraft={aircraft} loading={state.loading} setLoading={(loading) => setState((s) => ({ ...s, loading }))} result={wb} units={state.units} />
+          <WeightBalance aircraft={aircraft} loading={state.loading} setLoading={(loading) => setState((s) => ({ ...s, loading }))} result={wb} units={state.units} perf={computePerformance(state, aircraft, wb)} />
         )}
         {tab === 'Performance' && <Performance state={state} setState={setState} aircraft={aircraft} wb={wb} />}
         {tab === 'Aircraft' && (

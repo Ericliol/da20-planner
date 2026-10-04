@@ -1,10 +1,8 @@
-import { FT_PER_M, MAX_TAKEOFF_KG } from '../lib/afm';
-import { FACTOR_SOURCE, landingFactor, takeoffFactor } from '../lib/factors';
-import { densityAltitudeFt, isaTempC, pressureAltitudeFt, windComponents } from '../lib/atmos';
+import { MAX_TAKEOFF_KG } from '../lib/afm';
+import { densityAltitudeFt, pressureAltitudeFt, windComponents } from '../lib/atmos';
+import { FACTOR_SOURCE } from '../lib/factors';
 import { fmtDist, fmtFt, fmtMass } from '../lib/format';
-import { OutOfChartError } from '../lib/interp';
-import { landingDistance } from '../lib/landing';
-import { takeoffDistance, type TakeoffResult } from '../lib/takeoff';
+import { computePerformance } from '../lib/performance';
 import type { Aircraft, WBResult } from '../lib/wb';
 import type { Aerodrome, AppState } from '../state';
 import { Nomogram } from './Nomogram';
@@ -59,42 +57,14 @@ export function Performance(props: {
   wb: WBResult;
 }) {
   const { state, setState, aircraft, wb } = props;
-  const dep = state.departure;
-  const arr = state.arrival.sameAsDeparture ? { ...dep, availableM: state.arrival.availableM } : state.arrival;
-  // CAO 20.7.4 factor (1.15 for the DA20) times any extra school / personal margin.
-  const extra = state.marginFactor;
-  const toFactor = takeoffFactor(MAX_TAKEOFF_KG);
-  const ldFactor = landingFactor(MAX_TAKEOFF_KG);
-  const factorLabel = (f: number) => `× ${f.toFixed(2)} ${FACTOR_SOURCE}${extra !== 1 ? ` × ${extra} extra` : ''}`;
-
-  // ---- take-off ----
-  const depPa = pressureAltitudeFt(dep.elevationFt, dep.qnhHpa);
-  const depWind = windComponents(dep.runwayHeadingDeg, dep.windDirDeg, dep.windKt);
-  let to: TakeoffResult | null = null;
-  let to50: TakeoffResult | null = null;
-  let toError = '';
-  try {
-    const input = { pressureAltitudeFt: depPa, oatC: dep.oatC, massKg: wb.takeoff.massKg, windKt: depWind.headwind };
-    // TODR is always based on the distance to 50 ft (chart top, 15 m).
-    to50 = takeoffDistance({ ...input, obstacleM: 15 });
-    to = takeoffDistance({ ...input, obstacleM: dep.obstacleFt / FT_PER_M });
-  } catch (e) {
-    toError = e instanceof OutOfChartError ? e.message : String(e);
-  }
-  const toReq = to50 ? to50.total * toFactor * extra : 0;
-  const toOk = to50 ? toReq <= dep.availableM : false;
+  const perf = computePerformance(state, aircraft, wb);
+  const { departure: dep, arrival: arr, extra, toFactor, ldFactor, to, to50, toError, ld, ldNotes } = perf;
+  const toReq = perf.todr;
+  const toOk = perf.toOk;
+  const ldReq = perf.ldr;
+  const ldOk = perf.ldOk;
   const otherObstacle = Math.abs(dep.obstacleFt - 50) > 0.5;
-
-  // ---- landing ----
-  const arrPa = pressureAltitudeFt(arr.elevationFt, arr.qnhHpa);
-  const ld = landingDistance(arrPa, aircraft.idle1000Rpm);
-  const ldReq = ld.over50ft * ldFactor * extra;
-  const ldOk = ldReq <= arr.availableM;
-  const arrWind = windComponents(arr.runwayHeadingDeg, arr.windDirDeg, arr.windKt);
-  const ldNotes = [...ld.notes];
-  if (arr.oatC > isaTempC(arrPa) + 0.5) ldNotes.push(`OAT is ${Math.round(arr.oatC - isaTempC(arrPa))} °C above ISA. The AFM landing table is for standard temperature only, so expect a longer distance.`);
-  if (arrWind.headwind < -0.5) ldNotes.push('Tailwind component: the AFM landing table has no wind correction, so expect a longer distance.');
-  if (wb.landing.massKg < 799) ldNotes.push('AFM landing data is for max weight (800 kg), so it is conservative at lower weights.');
+  const factorLabel = (f: number) => `× ${f.toFixed(2)} ${FACTOR_SOURCE}${extra !== 1 ? ` × ${extra} extra` : ''}`;
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
