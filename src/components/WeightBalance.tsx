@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { ARM, FUEL_KG_PER_L, IN_PER_M, USABLE_FUEL_L } from '../lib/afm';
 import { fmtArm, fmtDist, fmtFt, fmtFuel, fmtMass, fmtMoment, fuelScale, massScale } from '../lib/format';
-import { FACTOR_SOURCE } from '../lib/factors';
+import { FACTOR_SOURCE, SURFACES } from '../lib/factors';
 import type { Aircraft, LoadPoint, Loading, Station, WBResult } from '../lib/wb';
 import type { PerformanceResult } from '../lib/performance';
 import type { Units } from '../state';
@@ -203,7 +203,7 @@ export function WeightBalance(props: {
       <PrintPerformance perf={perf} />
       <p className="hidden text-[9px] text-slate-500 print:order-3 print:col-span-2 print:block">
         Training aid only. Calculated from the DA20-C1 AFM (DOC # DA202-C1) Fig 6.7 / 6.8 and the aircraft's weighing
-        report. TODR / LDR use the CAO 20.7.4 factor. Cross-check against the AFM. The pilot in command is responsible for the loading and performance of the aircraft.
+        report. TODR / LDR = AFM × surface factor (CAA Safety Sense 09) × CAO 20.7.4 factor. Cross-check against the AFM. The pilot in command is responsible for the loading and performance of the aircraft.
       </p>
     </div>
   );
@@ -273,6 +273,7 @@ function PrintPerformance({ perf }: { perf: PerformanceResult }) {
     { k: 'Runway wind', d: wind(perf.depHeadwindKt), a: wind(perf.arrHeadwindKt) },
     { k: 'Ground roll (AFM)', d: to ? dist(to.groundRoll) : '-', a: dist(perf.ld.groundRoll) },
     { k: 'AFM distance to / from 50 ft', d: to ? dist(to.total) : '-', a: dist(perf.ld.over50ft) },
+    { k: 'Surface', d: `${SURFACES[dep.surface].label} × ${perf.toSurfaceFactor.toFixed(2)}`, a: `${SURFACES[arr.surface].label} × ${perf.ldSurfaceFactor.toFixed(2)}` },
     { k: `Factor (${FACTOR_SOURCE})`, d: factor(perf.toFactor), a: factor(perf.ldFactor) },
     { k: 'TODR / LDR', d: to ? <b>{dist(perf.todr)}</b> : '-', a: <b>{dist(perf.ldr)}</b> },
     { k: 'TODA / LDA', d: fmtDist(dep.availableM), a: fmtDist(arr.availableM) },

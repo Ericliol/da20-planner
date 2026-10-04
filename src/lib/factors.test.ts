@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_TAKEOFF_KG } from './afm';
-import { landingFactor, takeoffFactor } from './factors';
+import { landingFactor, SURFACES, takeoffFactor } from './factors';
 
 describe('CAO 20.7.4 distance factors', () => {
   it('is 1.15 for the DA20-C1 (800 kg MTOW)', () => {
@@ -20,5 +20,15 @@ describe('CAO 20.7.4 distance factors', () => {
     expect(landingFactor(3250)).toBeCloseTo(1.29);
     expect(landingFactor(4500)).toBeCloseTo(1.43);
     expect(landingFactor(5700)).toBe(1.43);
+  });
+});
+
+describe('surface factors (CAA Safety Sense 09)', () => {
+  it('matches the published table', () => {
+    expect(SURFACES['grass-dry']).toMatchObject({ takeoff: 1.2, landing: 1.15 });
+    expect(SURFACES['grass-wet']).toMatchObject({ takeoff: 1.3, landing: 1.35 });
+    expect(SURFACES['paved-wet']).toMatchObject({ takeoff: 1, landing: 1.15 });
+    expect(SURFACES.soft).toMatchObject({ takeoff: 1.25, landing: 1.25 });
+    expect(SURFACES['paved-dry']).toMatchObject({ takeoff: 1, landing: 1 });
   });
 });

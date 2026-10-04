@@ -1,6 +1,6 @@
 import { MAX_TAKEOFF_KG } from '../lib/afm';
 import { densityAltitudeFt, pressureAltitudeFt, windComponents } from '../lib/atmos';
-import { FACTOR_SOURCE } from '../lib/factors';
+import { FACTOR_SOURCE, type Surface, SURFACE_SOURCE, SURFACES } from '../lib/factors';
 import { fmtDist, fmtFt, fmtMass } from '../lib/format';
 import { computePerformance } from '../lib/performance';
 import type { Aircraft, WBResult } from '../lib/wb';
@@ -19,7 +19,30 @@ function AerodromeFields<T extends Aerodrome>({ a, set, availableLabel }: { a: T
       <NumberField label="Wind direction" value={a.windDirDeg} onChange={f('windDirDeg')} unit="°M" decimals={0} />
       <NumberField label="Wind speed" value={a.windKt} onChange={f('windKt')} unit="kt" decimals={0} />
       <NumberField label={availableLabel} value={a.availableM} onChange={f('availableM')} unit="m" decimals={0} />
+      <SurfaceSelect value={a.surface} onChange={(surface) => set({ ...a, surface })} />
     </div>
+  );
+}
+
+function SurfaceSelect({ value, onChange }: { value: Surface; onChange: (s: Surface) => void }) {
+  return (
+    <label className="col-span-2 block">
+      <span className="mb-1 block text-xs font-medium text-slate-600">Runway surface</span>
+      <select
+        className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-base outline-none focus:border-sky-500"
+        value={value}
+        onChange={(e) => onChange(e.target.value as Surface)}
+      >
+        {(Object.keys(SURFACES) as Surface[]).map((k) => (
+          <option key={k} value={k}>
+            {SURFACES[k].label}
+            {SURFACES[k].takeoff !== 1 || SURFACES[k].landing !== 1
+              ? ` (T/O × ${SURFACES[k].takeoff.toFixed(2)}, LDG × ${SURFACES[k].landing.toFixed(2)})`
+              : ''}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -64,7 +87,8 @@ export function Performance(props: {
   const ldReq = perf.ldr;
   const ldOk = perf.ldOk;
   const otherObstacle = Math.abs(dep.obstacleFt - 50) > 0.5;
-  const factorLabel = (f: number) => `× ${f.toFixed(2)} ${FACTOR_SOURCE}${extra !== 1 ? ` × ${extra} extra` : ''}`;
+  const factorLabel = (f: number, surface: number) =>
+    `${surface !== 1 ? `× ${surface.toFixed(2)} surface ` : ''}× ${f.toFixed(2)} ${FACTOR_SOURCE}${extra !== 1 ? ` × ${extra} extra` : ''}`;
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -79,7 +103,7 @@ export function Performance(props: {
           <div className="mt-3 grid grid-cols-2 gap-3">
             <Big label="Ground roll (lift-off)" value={fmtDist(to50.groundRoll)} sub={fmtFt(to50.groundRoll)} />
             <Big label="AFM distance to 50 ft" value={fmtDist(to50.total)} sub={fmtFt(to50.total)} />
-            <Big label={`TODR ${factorLabel(toFactor)}`} value={fmtDist(toReq)} sub={fmtFt(toReq)} tone={toOk ? 'ok' : 'bad'} />
+            <Big label={`TODR ${factorLabel(toFactor, perf.toSurfaceFactor)}`} value={fmtDist(toReq)} sub={fmtFt(toReq)} tone={toOk ? 'ok' : 'bad'} />
             <Big label="TODA" value={fmtDist(dep.availableM)} sub={`margin ${fmtDist(dep.availableM - toReq)}`} tone={toOk ? 'ok' : 'bad'} />
             {otherObstacle && (
               <Big label={`AFM distance to ${Math.round(dep.obstacleFt)} ft obstacle`} value={fmtDist(to.total)} sub={`${fmtFt(to.total)} · unfactored`} />
@@ -100,6 +124,7 @@ export function Performance(props: {
         {state.arrival.sameAsDeparture ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <NumberField label="LDA" value={state.arrival.availableM} onChange={(v) => setState((s) => ({ ...s, arrival: { ...s.arrival, availableM: v } }))} unit="m" decimals={0} />
+            <div className="col-span-2 self-end pb-2 text-xs text-slate-500">Surface: {SURFACES[dep.surface].label} (same as departure)</div>
           </div>
         ) : (
           <AerodromeFields a={state.arrival} set={(a) => setState((s) => ({ ...s, arrival: a }))} availableLabel="LDA" />
@@ -108,7 +133,7 @@ export function Performance(props: {
         <div className="mt-3 grid grid-cols-2 gap-3">
           <Big label="Ground roll" value={fmtDist(ld.groundRoll)} sub={fmtFt(ld.groundRoll)} />
           <Big label="AFM distance from 50 ft" value={fmtDist(ld.over50ft)} sub={fmtFt(ld.over50ft)} />
-          <Big label={`LDR ${factorLabel(ldFactor)}`} value={fmtDist(ldReq)} sub={fmtFt(ldReq)} tone={ldOk ? 'ok' : 'bad'} />
+          <Big label={`LDR ${factorLabel(ldFactor, perf.ldSurfaceFactor)}`} value={fmtDist(ldReq)} sub={fmtFt(ldReq)} tone={ldOk ? 'ok' : 'bad'} />
           <Big label="LDA" value={fmtDist(arr.availableM)} sub={`margin ${fmtDist(arr.availableM - ldReq)}`} tone={ldOk ? 'ok' : 'bad'} />
         </div>
         <Messages notes={ldNotes} />
@@ -131,6 +156,29 @@ export function Performance(props: {
             </tr>
           </tbody>
         </table>
+        <p className="mt-3 text-sm text-slate-700">
+          Runway surface factors ({SURFACE_SOURCE}, Aug 2024), applied to the AFM distance before the factor above. The
+          DA20-C1 AFM gives none.
+        </p>
+        <table className="mt-2 w-full text-sm tabular-nums">
+          <thead>
+            <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
+              <th className="py-1 font-medium">Surface</th>
+              <th className="py-1 text-right font-medium">Take-off</th>
+              <th className="py-1 text-right font-medium">Landing</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(Object.keys(SURFACES) as Surface[]).map((k) => (
+              <tr key={k} className={`border-b border-slate-100 ${k === dep.surface || k === arr.surface ? 'font-semibold' : ''}`}>
+                <td className="py-1">{SURFACES[k].label}</td>
+                <td className="py-1 text-right">{SURFACES[k].takeoff === 1 ? '-' : `× ${SURFACES[k].takeoff.toFixed(2)}`}</td>
+                <td className="py-1 text-right">{SURFACES[k].landing === 1 ? '-' : `× ${SURFACES[k].landing.toFixed(2)}`}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="mt-1 text-xs text-slate-500">Grass longer than 20 cm isn't covered: expect much more.</p>
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <NumberField
             label="Extra margin (on top)"

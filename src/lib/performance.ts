@@ -1,7 +1,7 @@
 import type { AppState } from '../state';
 import { FT_PER_M, MAX_TAKEOFF_KG } from './afm';
 import { isaTempC, pressureAltitudeFt, windComponents } from './atmos';
-import { landingFactor, takeoffFactor } from './factors';
+import { landingFactor, SURFACES, takeoffFactor } from './factors';
 import { OutOfChartError } from './interp';
 import { landingDistance, type LandingResult } from './landing';
 import { takeoffDistance, type TakeoffResult } from './takeoff';
@@ -14,6 +14,9 @@ export interface PerformanceResult {
   /** CAO 20.7.4 factors and the extra school / personal margin. */
   toFactor: number;
   ldFactor: number;
+  /** Runway surface factors (CAA Safety Sense 09). */
+  toSurfaceFactor: number;
+  ldSurfaceFactor: number;
   extra: number;
   depPaFt: number;
   depHeadwindKt: number;
@@ -55,14 +58,16 @@ export function computePerformance(state: AppState, aircraft: Aircraft, wb: WBRe
   } catch (e) {
     toError = e instanceof OutOfChartError ? e.message : String(e);
   }
-  const todr = to50 ? to50.total * toFactor * extra : 0;
+  const toSurfaceFactor = SURFACES[departure.surface].takeoff;
+  const todr = to50 ? to50.total * toSurfaceFactor * toFactor * extra : 0;
   const toOk = to50 ? todr <= departure.availableM : false;
 
   // ---- landing ----
   const arrPaFt = pressureAltitudeFt(arrival.elevationFt, arrival.qnhHpa);
   const arrHeadwindKt = windComponents(arrival.runwayHeadingDeg, arrival.windDirDeg, arrival.windKt).headwind;
   const ld = landingDistance(arrPaFt, aircraft.idle1000Rpm);
-  const ldr = ld.over50ft * ldFactor * extra;
+  const ldSurfaceFactor = SURFACES[arrival.surface].landing;
+  const ldr = ld.over50ft * ldSurfaceFactor * ldFactor * extra;
   const ldOk = ldr <= arrival.availableM;
   const ldNotes = [...ld.notes];
   if (arrival.oatC > isaTempC(arrPaFt) + 0.5)
@@ -75,6 +80,8 @@ export function computePerformance(state: AppState, aircraft: Aircraft, wb: WBRe
     arrival,
     toFactor,
     ldFactor,
+    toSurfaceFactor,
+    ldSurfaceFactor,
     extra,
     depPaFt,
     depHeadwindKt,

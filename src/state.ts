@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { Surface } from './lib/factors';
 import type { Aircraft, Loading } from './lib/wb';
 
 export interface Units {
@@ -15,6 +16,7 @@ export interface Aerodrome {
   windKt: number;
   /** Runway length available (m): TODA for departure, LDA for arrival. */
   availableM: number;
+  surface: Surface;
 }
 
 export interface AppState {
@@ -48,6 +50,7 @@ const aerodrome: Aerodrome = {
   windDirDeg: 0,
   windKt: 0,
   availableM: 1000,
+  surface: 'paved-dry',
 };
 
 export const DEFAULT_STATE: AppState = {
@@ -69,7 +72,15 @@ function load(): AppState {
     if (!raw) return DEFAULT_STATE;
     const s = JSON.parse(raw) as AppState;
     if (s.version !== 1) return DEFAULT_STATE;
-    return { ...DEFAULT_STATE, ...s };
+    // Merge nested objects too, so fields added in later versions get their defaults.
+    return {
+      ...DEFAULT_STATE,
+      ...s,
+      units: { ...DEFAULT_STATE.units, ...s.units },
+      loading: { ...DEFAULT_STATE.loading, ...s.loading },
+      departure: { ...DEFAULT_STATE.departure, ...s.departure },
+      arrival: { ...DEFAULT_STATE.arrival, ...s.arrival },
+    };
   } catch {
     return DEFAULT_STATE;
   }

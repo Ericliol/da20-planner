@@ -55,3 +55,7 @@ python tools/extract_takeoff.py "../DA20-C1 AFM & Supp.pdf" src/data/takeoff.jso
 - **Required distances (Australia, CAO 20.7.4):** TODR = AFM distance to 50 ft × 1.15 and LDR = AFM distance from
   50 ft × 1.15 (MTOW ≤ 2000 kg; the code interpolates the full rule by MTOW in `src/lib/factors.ts`). TODR must not
   exceed TODA, and LDR must not exceed LDA. An optional extra margin for a school or personal SOP multiplies on top.
+- **Runway surface:** the DA20-C1 AFM has no grass data, so surface factors come from UK CAA Safety Sense 09
+  *Weight, balance and performance* (Aug 2024). Take-off / landing factors: dry grass (up to 20 cm) ×1.2 / ×1.15,
+  wet grass ×1.3 / ×1.35, wet paved – / ×1.15, soft ground or snow ×1.25 / ×1.25. They are applied before the
+  CAO 20.7.4 factor: TODR = AFM × surface × 1.15.
