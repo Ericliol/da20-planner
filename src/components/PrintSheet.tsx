@@ -58,7 +58,9 @@ export function PrintSheet(props: { aircraft: Aircraft; loading: Loading; wb: WB
           Take-off distance to 50 ft (AFM Fig 5.4)
         </h2>
         {perf.to50 ? (
-          <Nomogram r={perf.to50} height={640} />
+          <div className="break-inside-avoid">
+            <Nomogram r={perf.to50} height={430} />
+          </div>
         ) : (
           <p className="text-[11px] font-semibold text-red-700">{perf.toError}</p>
         )}
