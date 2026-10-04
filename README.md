@@ -52,4 +52,6 @@ python tools/extract_takeoff.py "../DA20-C1 AFM & Supp.pdf" src/data/takeoff.jso
 - The chart tops out at 15 m (49 ft); a 50 ft obstacle uses 15 m.
 - **Landing:** the AFM gives only an altitude table (max weight, ISA, no wind). The app warns about hot days and
   tailwinds but applies no correction for them.
-- The margin factor multiplies the required distances for your school's SOP.
+- **Required distances (Australia, CAO 20.7.4):** TODR = AFM distance to 50 ft × 1.15 and LDR = AFM distance from
+  50 ft × 1.15 (MTOW ≤ 2000 kg; the code interpolates the full rule by MTOW in `src/lib/factors.ts`). TODR must not
+  exceed TODA, and LDR must not exceed LDA. An optional extra margin for a school or personal SOP multiplies on top.

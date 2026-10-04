@@ -1,4 +1,5 @@
-import { FT_PER_M } from '../lib/afm';
+import { FT_PER_M, MAX_TAKEOFF_KG } from '../lib/afm';
+import { FACTOR_SOURCE, landingFactor, takeoffFactor } from '../lib/factors';
 import { densityAltitudeFt, isaTempC, pressureAltitudeFt, windComponents } from '../lib/atmos';
 import { fmtDist, fmtFt, fmtMass } from '../lib/format';
 import { OutOfChartError } from '../lib/interp';
@@ -60,31 +61,34 @@ export function Performance(props: {
   const { state, setState, aircraft, wb } = props;
   const dep = state.departure;
   const arr = state.arrival.sameAsDeparture ? { ...dep, availableM: state.arrival.availableM } : state.arrival;
-  const k = state.marginFactor;
+  // CAO 20.7.4 factor (1.15 for the DA20) times any extra school / personal margin.
+  const extra = state.marginFactor;
+  const toFactor = takeoffFactor(MAX_TAKEOFF_KG);
+  const ldFactor = landingFactor(MAX_TAKEOFF_KG);
+  const factorLabel = (f: number) => `× ${f.toFixed(2)} ${FACTOR_SOURCE}${extra !== 1 ? ` × ${extra} extra` : ''}`;
 
   // ---- take-off ----
   const depPa = pressureAltitudeFt(dep.elevationFt, dep.qnhHpa);
   const depWind = windComponents(dep.runwayHeadingDeg, dep.windDirDeg, dep.windKt);
   let to: TakeoffResult | null = null;
+  let to50: TakeoffResult | null = null;
   let toError = '';
   try {
-    to = takeoffDistance({
-      pressureAltitudeFt: depPa,
-      oatC: dep.oatC,
-      massKg: wb.takeoff.massKg,
-      windKt: depWind.headwind,
-      obstacleM: dep.obstacleFt / FT_PER_M,
-    });
+    const input = { pressureAltitudeFt: depPa, oatC: dep.oatC, massKg: wb.takeoff.massKg, windKt: depWind.headwind };
+    // TODR is always based on the distance to 50 ft (chart top, 15 m).
+    to50 = takeoffDistance({ ...input, obstacleM: 15 });
+    to = takeoffDistance({ ...input, obstacleM: dep.obstacleFt / FT_PER_M });
   } catch (e) {
     toError = e instanceof OutOfChartError ? e.message : String(e);
   }
-  const toReq = to ? to.total * k : 0;
-  const toOk = to ? toReq <= dep.availableM : false;
+  const toReq = to50 ? to50.total * toFactor * extra : 0;
+  const toOk = to50 ? toReq <= dep.availableM : false;
+  const otherObstacle = Math.abs(dep.obstacleFt - 50) > 0.5;
 
   // ---- landing ----
   const arrPa = pressureAltitudeFt(arr.elevationFt, arr.qnhHpa);
   const ld = landingDistance(arrPa, aircraft.idle1000Rpm);
-  const ldReq = ld.over50ft * k;
+  const ldReq = ld.over50ft * ldFactor * extra;
   const ldOk = ldReq <= arr.availableM;
   const arrWind = windComponents(arr.runwayHeadingDeg, arr.windDirDeg, arr.windKt);
   const ldNotes = [...ld.notes];
@@ -97,16 +101,19 @@ export function Performance(props: {
       <Card title="Departure" right={to ? <StatusPill ok={toOk}>{toOk ? 'Fits TODA' : 'Exceeds TODA'}</StatusPill> : <StatusPill ok={false}>Out of chart</StatusPill>}>
         <AerodromeFields a={dep} set={(d) => setState((s) => ({ ...s, departure: d }))} availableLabel="TODA" />
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <NumberField label="Obstacle height" value={dep.obstacleFt} onChange={(v) => setState((s) => ({ ...s, departure: { ...s.departure, obstacleFt: v } }))} unit="ft" decimals={0} hint="Chart max 49 ft (15 m)" />
+          <NumberField label="Obstacle height" value={dep.obstacleFt} onChange={(v) => setState((s) => ({ ...s, departure: { ...s.departure, obstacleFt: v } }))} unit="ft" decimals={0} hint="For info only: TODR always uses 50 ft. Chart max 49 ft (15 m)" />
         </div>
         <Atmos a={dep} />
         <p className="mt-2 text-xs text-slate-500">Take-off mass from W&amp;B: {fmtMass(wb.takeoff.massKg, state.units)}</p>
-        {to && (
+        {to && to50 && (
           <div className="mt-3 grid grid-cols-2 gap-3">
-            <Big label="Ground roll (lift-off)" value={fmtDist(to.groundRoll)} sub={fmtFt(to.groundRoll)} />
-            <Big label={`Distance to ${Math.round(Math.min(dep.obstacleFt, to.used.obstacleM * FT_PER_M + 1))} ft obstacle`} value={fmtDist(to.total)} sub={fmtFt(to.total)} />
-            {k !== 1 && <Big label={`Required × ${k}`} value={fmtDist(toReq)} sub={fmtFt(toReq)} tone={toOk ? 'ok' : 'bad'} />}
+            <Big label="Ground roll (lift-off)" value={fmtDist(to50.groundRoll)} sub={fmtFt(to50.groundRoll)} />
+            <Big label="AFM distance to 50 ft" value={fmtDist(to50.total)} sub={fmtFt(to50.total)} />
+            <Big label={`TODR ${factorLabel(toFactor)}`} value={fmtDist(toReq)} sub={fmtFt(toReq)} tone={toOk ? 'ok' : 'bad'} />
             <Big label="TODA" value={fmtDist(dep.availableM)} sub={`margin ${fmtDist(dep.availableM - toReq)}`} tone={toOk ? 'ok' : 'bad'} />
+            {otherObstacle && (
+              <Big label={`AFM distance to ${Math.round(dep.obstacleFt)} ft obstacle`} value={fmtDist(to.total)} sub={`${fmtFt(to.total)} · unfactored`} />
+            )}
           </div>
         )}
         <Messages errors={toError ? [toError] : []} notes={to?.notes} />
@@ -130,16 +137,38 @@ export function Performance(props: {
         <Atmos a={arr} />
         <div className="mt-3 grid grid-cols-2 gap-3">
           <Big label="Ground roll" value={fmtDist(ld.groundRoll)} sub={fmtFt(ld.groundRoll)} />
-          <Big label="Landing distance over 50 ft" value={fmtDist(ld.over50ft)} sub={fmtFt(ld.over50ft)} />
-          {k !== 1 && <Big label={`Required × ${k}`} value={fmtDist(ldReq)} sub={fmtFt(ldReq)} tone={ldOk ? 'ok' : 'bad'} />}
+          <Big label="AFM distance from 50 ft" value={fmtDist(ld.over50ft)} sub={fmtFt(ld.over50ft)} />
+          <Big label={`LDR ${factorLabel(ldFactor)}`} value={fmtDist(ldReq)} sub={fmtFt(ldReq)} tone={ldOk ? 'ok' : 'bad'} />
           <Big label="LDA" value={fmtDist(arr.availableM)} sub={`margin ${fmtDist(arr.availableM - ldReq)}`} tone={ldOk ? 'ok' : 'bad'} />
         </div>
         <Messages notes={ldNotes} />
       </Card>
 
-      <Card title="Margin factor">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <NumberField label="Multiply required distances by" value={k} onChange={(v) => setState((s) => ({ ...s, marginFactor: v > 0 ? v : 1 }))} decimals={2} hint="Per your school / personal SOP (1 = AFM figures)" />
+      <Card title="Distance factors">
+        <p className="text-sm text-slate-700">
+          Australian rule ({FACTOR_SOURCE}): multiply the AFM distance to 50 ft (take-off) or from 50 ft (landing) by the
+          factor for the aeroplane's MTOW. The result must not exceed TODA / LDA.
+        </p>
+        <table className="mt-2 w-full text-sm tabular-nums">
+          <tbody>
+            <tr className="border-b border-slate-100">
+              <td className="py-1">Take-off (MTOW {MAX_TAKEOFF_KG} kg ≤ 2000 kg)</td>
+              <td className="py-1 text-right font-semibold">× {toFactor.toFixed(2)}</td>
+            </tr>
+            <tr className="border-b border-slate-100">
+              <td className="py-1">Landing (MTOW {MAX_TAKEOFF_KG} kg ≤ 2000 kg)</td>
+              <td className="py-1 text-right font-semibold">× {ldFactor.toFixed(2)}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <NumberField
+            label="Extra margin (on top)"
+            value={extra}
+            onChange={(v) => setState((s) => ({ ...s, marginFactor: v > 0 ? v : 1 }))}
+            decimals={2}
+            hint="School / personal SOP. 1 = none"
+          />
         </div>
         <p className="mt-3 text-xs text-slate-500">
           The AFM figures assume a level, dry, paved runway, a new aircraft and correct technique. Grass, wet surfaces,
