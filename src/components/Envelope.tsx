@@ -7,6 +7,8 @@ const W = 520;
 const H = 340;
 const PAD = { l: 52, r: 16, t: 14, b: 40 };
 const INLB_PER_KGM = LB_PER_KG * IN_PER_M;
+/** Weight at which the fwd / aft limit lines are labelled. */
+const LABEL_KG = 590;
 // Same frame as AFM Fig 6.8: 9000-22000 in·lb, 1200-1800 lb.
 const MOMENT = [9000 / INLB_PER_KGM, 22000 / INLB_PER_KGM];
 const MASS = [1200 / LB_PER_KG, 1800 / LB_PER_KG];
@@ -26,6 +28,12 @@ export function Envelope({ points, units }: { points: LoadPoint[]; units: Units 
   const [active, setActive] = useState<string | null>(null);
   const activePoint = points.find((p) => p.label === active);
   const imperial = units.mass === 'lb';
+  // Ramp sits almost on top of take-off, so its support lines only show when hovered.
+  const guided = points.filter((p) => p.label !== 'Ramp' || p.label === active);
+  const colorOf = (p: LoadPoint) => (p.withinCg && p.withinMass ? COLORS[p.label] : '#dc2626');
+  const momentText = (p: LoadPoint) =>
+    imperial ? `${Math.round(p.momentKgM * INLB_PER_KGM).toLocaleString()}` : p.momentKgM.toFixed(1);
+  const massText = (p: LoadPoint) => (imperial ? `${(p.massKg * LB_PER_KG).toFixed(0)} lb` : `${p.massKg.toFixed(1)} kg`);
   const momentTicks = imperial
     ? [9000, 11000, 13000, 15000, 17000, 19000, 21000].map((v) => v / INLB_PER_KGM)
     : [120, 140, 160, 180, 200, 220, 240];
@@ -98,10 +106,10 @@ export function Envelope({ points, units }: { points: LoadPoint[]; units: Units 
               {text}
             </text>
           ))}
-          <text x={sx(fwd[0][0]) + 6} y={sy(fwd[0][1]) - 6}>
+          <text x={sx(LABEL_KG * 0.202) + 8} y={sy(LABEL_KG) + 3}>
             Fwd limit {label(0)}
           </text>
-          <text x={sx(aft[2][0]) - 6} y={sy(aft[2][1]) - 6} textAnchor="end">
+          <text x={sx(LABEL_KG * 0.317) - 8} y={sy(LABEL_KG) + 3} textAnchor="end">
             Aft limit {label(3)}
           </text>
           <text x={(sx(fwd[2][0]) + sx(aft[0][0])) / 2} y={sy(800) - 5} textAnchor="middle">
@@ -114,6 +122,17 @@ export function Envelope({ points, units }: { points: LoadPoint[]; units: Units 
         <text transform={`translate(13 ${(H - PAD.b) / 2}) rotate(-90)`} textAnchor="middle" fontSize="11" fill="#475569">
           Flight weight ({imperial ? 'lb' : 'kg'})
         </text>
+
+        {/* support lines: down to the moment axis, across to the weight axis */}
+        {guided.map((p) => {
+          const c = colorOf(p);
+          return (
+            <g key={`s-${p.label}`} stroke={c} strokeWidth="0.9" strokeDasharray="4 2.5" opacity="0.85">
+              <line x1={sx(p.momentKgM)} x2={sx(p.momentKgM)} y1={sy(p.massKg)} y2={H - PAD.b} />
+              <line x1={PAD.l} x2={sx(p.momentKgM)} y1={sy(p.massKg)} y2={sy(p.massKg)} />
+            </g>
+          );
+        })}
 
         <polyline
           points={flight.map((p) => `${sx(p.momentKgM)},${sy(p.massKg)}`).join(' ')}
@@ -144,6 +163,24 @@ export function Envelope({ points, units }: { points: LoadPoint[]; units: Units 
             </g>
           );
         })}
+        {/* axis intercepts */}
+        {guided.map((p) => (
+          <g key={`t-${p.label}`} stroke={colorOf(p)} strokeWidth="1.6">
+            <line x1={sx(p.momentKgM)} x2={sx(p.momentKgM)} y1={H - PAD.b - 4} y2={H - PAD.b + 4} />
+            <line x1={PAD.l - 4} x2={PAD.l + 4} y1={sy(p.massKg)} y2={sy(p.massKg)} />
+          </g>
+        ))}
+        {spread(guided.map((p) => ({ key: p.label, pos: sx(p.momentKgM), w: tagWidth(momentText(p)) })), PAD.l, W - PAD.r).map(
+          ({ key, pos }) => {
+            const p = guided.find((g) => g.label === key)!;
+            return <AxisTag key={`xm-${key}`} cx={pos} cy={H - PAD.b - 9} text={momentText(p)} color={colorOf(p)} />;
+          },
+        )}
+        {spread(guided.map((p) => ({ key: p.label, pos: sy(p.massKg), w: 13 })), PAD.t, H - PAD.b).map(({ key, pos }) => {
+          const p = guided.find((g) => g.label === key)!;
+          const text = massText(p);
+          return <AxisTag key={`ym-${key}`} cx={PAD.l + 6 + tagWidth(text) / 2} cy={pos} text={text} color={colorOf(p)} />;
+        })}
         {activePoint && <Tooltip p={activePoint} units={units} />}
       </svg>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
@@ -164,6 +201,38 @@ export function Envelope({ points, units }: { points: LoadPoint[]; units: Units 
       </div>
     </>
   );
+}
+
+const tagWidth = (text: string) => text.length * 5.2 + 8;
+
+/** Small coloured value tag centred on (cx, cy). */
+function AxisTag({ cx, cy, text, color }: { cx: number; cy: number; text: string; color: string }) {
+  const w = tagWidth(text);
+  return (
+    <g pointerEvents="none">
+      <rect x={cx - w / 2} y={cy - 6.5} width={w} height={13} rx="3" fill="white" stroke={color} strokeWidth="0.8" />
+      <text x={cx} y={cy + 3.5} textAnchor="middle" fontSize="9" fontWeight="700" fill={color}>
+        {text}
+      </text>
+    </g>
+  );
+}
+
+/**
+ * Nudge tag positions along one axis so they don't overlap, keeping them
+ * within [min, max]. Each item has a centre position and a size along the axis.
+ */
+function spread<T extends { pos: number; w: number }>(items: T[], min: number, max: number): T[] {
+  const out = [...items].sort((a, b) => a.pos - b.pos).map((t) => ({ ...t }));
+  for (let i = 0; i < out.length; i++) {
+    const lo = i === 0 ? min + out[i].w / 2 : out[i - 1].pos + (out[i - 1].w + out[i].w) / 2 + 2;
+    out[i].pos = Math.max(out[i].pos, lo);
+  }
+  for (let i = out.length - 1; i >= 0; i--) {
+    const hi = i === out.length - 1 ? max - out[i].w / 2 : out[i + 1].pos - (out[i + 1].w + out[i].w) / 2 - 2;
+    out[i].pos = Math.min(out[i].pos, hi);
+  }
+  return out;
 }
 
 /** Detail box for one load point, drawn inside the SVG next to the point. */

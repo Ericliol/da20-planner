@@ -259,7 +259,7 @@ function zulu(d: Date) {
 /** Shown only when printing: TODR / LDR against TODA / LDA. */
 function PrintPerformance({ perf }: { perf: PerformanceResult }) {
   const { departure: dep, arrival: arr } = perf;
-  const wind = (hw: number) => (Math.abs(hw) < 0.05 ? 'calm / crosswind only' : `${hw >= 0 ? 'HW' : 'TW'} ${Math.abs(hw).toFixed(1)} kt`);
+  const wind = (hw: number) => (Math.abs(hw) < 0.05 ? 'calm' : `${hw >= 0 ? 'HW' : 'TW'} ${Math.abs(hw).toFixed(1)} kt`);
   const dist = (m: number) => `${fmtDist(m)} (${fmtFt(m)})`;
   const factor = (f: number) => `× ${f.toFixed(2)}${perf.extra !== 1 ? ` × ${perf.extra}` : ''}`;
   const verdict = (ok: boolean, avail: number, req: number) => (
@@ -278,9 +278,12 @@ function PrintPerformance({ perf }: { perf: PerformanceResult }) {
       a: wind(perf.arrHeadwindKt),
     },
     { k: 'Ground roll (AFM)', d: to ? dist(to.groundRoll) : '-', a: dist(perf.ld.groundRoll) },
-    { k: 'AFM distance to / from 50 ft', d: to ? dist(to.total) : '-', a: dist(perf.ld.over50ft) },
-    { k: 'Surface', d: `${SURFACES[dep.surface].label} × ${perf.toSurfaceFactor.toFixed(2)}`, a: `${SURFACES[arr.surface].label} × ${perf.ldSurfaceFactor.toFixed(2)}` },
-    { k: 'Slope', d: slope(dep.slopePct, perf.toSlopeFactor), a: slope(arr.slopePct, perf.ldSlopeFactor) },
+    { k: 'AFM to / from 50 ft', d: to ? dist(to.total) : '-', a: dist(perf.ld.over50ft) },
+    {
+      k: 'Surface / slope',
+      d: `${SURFACES[dep.surface].label} × ${perf.toSurfaceFactor.toFixed(2)}; ${slope(dep.slopePct, perf.toSlopeFactor)}`,
+      a: `${SURFACES[arr.surface].label} × ${perf.ldSurfaceFactor.toFixed(2)}; ${slope(arr.slopePct, perf.ldSlopeFactor)}`,
+    },
     { k: `Factor (${FACTOR_SOURCE})`, d: factor(perf.toFactor), a: factor(perf.ldFactor) },
     { k: 'TODR / LDR', d: to ? <b>{dist(perf.todr)}</b> : '-', a: <b>{dist(perf.ldr)}</b> },
     { k: 'TODA / LDA', d: fmtDist(dep.availableM), a: fmtDist(arr.availableM) },
@@ -293,7 +296,7 @@ function PrintPerformance({ perf }: { perf: PerformanceResult }) {
   return (
     <section className="hidden rounded-xl border border-slate-200 p-3 print:order-2 print:block">
       <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Take-off &amp; landing</h2>
-      <table className="w-full text-xs tabular-nums">
+      <table className="w-full text-[10px] leading-tight tabular-nums">
         <thead>
           <tr className="border-b border-slate-200 text-left text-slate-500">
             <th className="py-1 pr-2 font-medium" />
@@ -304,7 +307,7 @@ function PrintPerformance({ perf }: { perf: PerformanceResult }) {
         <tbody>
           {rows.map(({ k, d, a }) => (
             <tr key={k} className="border-b border-slate-100 align-top">
-              <td className="py-1 pr-2 text-slate-500">{k}</td>
+              <td className="whitespace-nowrap py-1 pr-2 text-slate-500">{k}</td>
               <td className="py-1 pr-2">{d}</td>
               <td className="py-1">{a}</td>
             </tr>
