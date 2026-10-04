@@ -75,14 +75,18 @@ export default function App() {
               selectedId={aircraft.id}
               units={state.units}
               onChange={(list, selectedId) => setState((s) => ({ ...s, aircraft: list, selectedId }))}
+              onRestoreBuiltIn={() => setState((s) => ({ ...s, aircraft: DEFAULT_STATE.aircraft, selectedId: DEFAULT_STATE.selectedId }))}
             />
             <div className="text-sm text-slate-600">
               <button
                 type="button"
                 className="rounded-lg border border-slate-300 px-3 py-2 hover:bg-white"
-                onClick={() => confirm('Reset all inputs and aircraft profiles to defaults?') && setState(() => DEFAULT_STATE)}
+                onClick={() =>
+                  confirm('Reset your load, aerodrome and unit inputs to defaults? Aircraft data is not changed.') &&
+                  setState((s) => ({ ...DEFAULT_STATE, aircraft: s.aircraft, selectedId: s.selectedId }))
+                }
               >
-                Reset everything to defaults
+                Reset my inputs to defaults
               </button>
             </div>
           </div>
