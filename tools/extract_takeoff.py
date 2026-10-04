@@ -64,6 +64,44 @@ def flatten(drawing):
     return clean
 
 
+def interp(curve, x):
+    """Linear interpolation of y at x on a curve sorted by x (clamped at the ends)."""
+    if x <= curve[0][0]:
+        return curve[0][1]
+    if x >= curve[-1][0]:
+        return curve[-1][1]
+    for (x0, y0), (x1, y1) in zip(curve, curve[1:]):
+        if x0 <= x <= x1:
+            return y0 if x1 == x0 else y0 + (x - x0) * (y1 - y0) / (x1 - x0)
+    return None
+
+
+def centreline(pts, n=40):
+    """
+    The thick chart lines are drawn as outlines: out along one edge, round the
+    cap and back along the other. Split at the far end, average the two edges
+    at common x values, and extend to the full x range so the curve still
+    reaches the panel edges. Single-edge paths (thin dashed lines) are just sorted.
+    """
+    start = pts[0]
+    far = max(range(len(pts)), key=lambda i: (pts[i][0] - start[0]) ** 2 + (pts[i][1] - start[1]) ** 2)
+    a, b = sorted(pts[: far + 1]), sorted(pts[far:])
+    if len(b) < 3:
+        return sorted(pts)
+    lo, hi = max(a[0][0], b[0][0]), min(a[-1][0], b[-1][0])
+    xs = [lo + (hi - lo) * i / n for i in range(n + 1)]
+    mid = [(x, (interp(a, x) + interp(b, x)) / 2) for x in xs]
+    # Extend linearly to the outermost x of either edge (caps are ~0.5 pt).
+    x_min, x_max = min(a[0][0], b[0][0]), max(a[-1][0], b[-1][0])
+    (x0, y0), (x1, y1) = mid[0], mid[1]
+    if x_min < x0:
+        mid.insert(0, (x_min, y0 + (x_min - x0) * (y1 - y0) / (x1 - x0)))
+    (x0, y0), (x1, y1) = mid[-2], mid[-1]
+    if x_max > x1:
+        mid.append((x_max, y1 + (x_max - x1) * (y1 - y0) / (x1 - x0)))
+    return mid
+
+
 def main(pdf, out):
     doc = pymupdf.open(pdf)
     drawings = {SHEET1: doc[SHEET1].get_drawings(), SHEET2: doc[SHEET2].get_drawings()}
@@ -71,9 +109,8 @@ def main(pdf, out):
     for name, (page, idxs, var, dist) in PANELS.items():
         curves = []
         for i in idxs:
-            pts = [(round(var(y), 3), round(dist(x), 2)) for x, y in flatten(drawings[page][i])]
-            pts.sort()
-            curves.append(pts)
+            pts = [(var(y), dist(x)) for x, y in flatten(drawings[page][i])]
+            curves.append([(round(v, 3), round(d, 2)) for v, d in centreline(pts)])
         result[name] = curves
     with open(out, "w") as f:
         json.dump(result, f, indent=None, separators=(",", ":"))

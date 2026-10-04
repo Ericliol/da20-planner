@@ -49,7 +49,7 @@ python tools/extract_takeoff.py "../DA20-C1 AFM & Supp.pdf" src/data/takeoff.jso
 
 - **Take-off chart:** the stages are pressure altitude/OAT → weight → wind → obstacle. Tailwind is read by
   entering at the tailwind value and following the dashed lines up to the 0 kt line.
-- The AFM worked example states **341 m**. Following the guide lines precisely gives about **352 m**, because the
+- The AFM worked example states **341 m**. Following the guide lines precisely gives about **351 m**, because the
   example's hand-drawn line jumps onto the "300 m" guide in the obstacle panel. The tests accept 341 m −1%/+5%.
 - Inputs outside the chart are rejected. Values beyond the chart in the safe direction (weight < 600 kg,
   headwind > 20 kt, pressure altitude < 0) are clamped to the chart edge, which is conservative.

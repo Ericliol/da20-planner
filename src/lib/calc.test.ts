@@ -86,7 +86,7 @@ describe('weight & balance', () => {
 describe('take-off distance (AFM Fig 5.4)', () => {
   // The AFM states 341 m. Its hand-drawn example line jumps onto the "300 m"
   // guide in the obstacle panel rather than running parallel to it; following
-  // the guides properly gives ~350 m. Accept 341 m +5% / -1%.
+  // the guides properly gives ~351 m. Accept 341 m +5% / -1%.
   it('matches the AFM example: 1000 ft, 72 °F, 1600 lb, 4 kt HW, 16 ft obstacle -> 341 m', () => {
     const r = takeoffDistance({
       pressureAltitudeFt: 1000,
