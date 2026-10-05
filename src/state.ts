@@ -8,6 +8,10 @@ export interface Units {
 }
 
 export interface Aerodrome {
+  /** ICAO code for METAR / TAF, e.g. YBAF. */
+  icao: string;
+  /** Magnetic variation, degrees east (METAR/TAF winds are true). */
+  magVarE: number;
   elevationFt: number;
   qnhHpa: number;
   oatC: number;
@@ -93,6 +97,8 @@ export function mergeBuiltInAircraft(saved: Aircraft[]): Aircraft[] {
 }
 
 const aerodrome: Aerodrome = {
+  icao: '',
+  magVarE: 11, // south-east Queensland
   elevationFt: 0,
   qnhHpa: 1013,
   oatC: 15,

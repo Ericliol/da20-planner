@@ -21,6 +21,23 @@ https://ericliol.github.io/da20-planner/: deployed automatically by GitHub Actio
 
 On a phone, open the link and use **Add to Home Screen** (Safari share menu / Chrome menu). It then works offline.
 
+## Weather relay (METAR / TAF)
+
+Browsers can't call aviationweather.gov directly, so the **NAIPS / Wx** tab goes through a tiny Cloudflare Worker
+in `worker/`. It only relays METAR/TAF for valid ICAO codes, only for this site's origins, with a 5-minute cache.
+
+```bash
+cd worker
+npx wrangler login     # once, with your free Cloudflare account
+npx wrangler deploy    # prints https://da20-wx.<your-subdomain>.workers.dev
+```
+
+Then set that URL as `VITE_WX_PROXY_URL` in `.github/workflows/deploy.yml`. For local development run
+`npx wrangler dev --port 8787` in `worker/`; `.env.development` already points the app there.
+
+The international feed only has the major aerodromes (YBBN, YBSU, YBCG, YAMB…). Smaller ones such as YBAF, YRED,
+YMMB and YSBK, and all NOTAMs, are only in NAIPS, which needs a login, so the tab links to it.
+
 ## Where the numbers come from
 
 | Data | Source |

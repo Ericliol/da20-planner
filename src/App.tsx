@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AircraftDocuments } from './components/AircraftDocuments';
 import { PrintSheet } from './components/PrintSheet';
+import { Weather } from './components/Weather';
 import { AircraftEditor } from './components/AircraftEditor';
 import { Performance } from './components/Performance';
 import { StatusPill, Toggle } from './components/ui';
@@ -9,7 +10,7 @@ import { computePerformance } from './lib/performance';
 import { computeWB } from './lib/wb';
 import { DEFAULT_STATE, usePersistentState } from './state';
 
-const TABS = ['W&B', 'Performance', 'Aircraft'] as const;
+const TABS = ['W&B', 'Performance', 'NAIPS / Wx', 'Aircraft'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function App() {
@@ -79,6 +80,7 @@ export default function App() {
           <WeightBalance aircraft={aircraft} loading={state.loading} setLoading={(loading) => setState((s) => ({ ...s, loading }))} result={wb} units={state.units} />
         )}
         {tab === 'Performance' && <Performance state={state} setState={setState} aircraft={aircraft} wb={wb} />}
+        {tab === 'NAIPS / Wx' && <Weather state={state} setState={setState} />}
         {tab === 'Aircraft' && (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <AircraftEditor
