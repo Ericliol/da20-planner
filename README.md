@@ -32,7 +32,8 @@ npx wrangler login     # once, with your free Cloudflare account
 npx wrangler deploy    # prints https://da20-wx.<your-subdomain>.workers.dev
 ```
 
-Then set that URL as `VITE_WX_PROXY_URL` in `.github/workflows/deploy.yml`. For local development run
+Deployed at `https://da20-wx.ericye223378.workers.dev` (set in `.env.production`; the code was pasted into the
+Cloudflare dashboard editor, which works as well as `wrangler deploy`). For local development run
 `npx wrangler dev --port 8787` in `worker/`; `.env.development` already points the app there.
 
 The international feed only has the major aerodromes (YBBN, YBSU, YBCG, YAMB…). Smaller ones such as YBAF, YRED,
