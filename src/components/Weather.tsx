@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { WX_PROXY_URL } from '../config';
+import { type ParsedBriefing, parseBriefing } from '../lib/naipsParse';
 import { ageText, fetchMetars, fetchTafs, formatTaf, isIcao, type Metar, metarToAerodrome, type Taf } from '../lib/wx';
 import type { Aerodrome, AppState } from '../state';
 import { Card, NumberField } from './ui';
@@ -17,6 +18,8 @@ export function Weather({ state, setState }: { state: AppState; setState: (fn: (
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [applied, setApplied] = useState('');
+  const [pasted, setPasted] = useState('');
+  const [parsed, setParsed] = useState<ParsedBriefing | null>(null);
 
   const setAd = (which: Which, patch: Partial<Aerodrome>) =>
     setState((s) => ({ ...s, [which]: { ...s[which], ...patch } }));
@@ -145,6 +148,78 @@ export function Weather({ state, setState }: { state: AppState; setState: (fn: (
             </Card>
           );
         })}
+
+      <Card title="Paste NAIPS briefing" className="lg:col-span-2">
+        <p className="text-sm text-slate-700">
+          For aerodromes not in the live feed (e.g. YBAF): log in to{' '}
+          <a href={NAIPS_URL} target="_blank" rel="noreferrer" className="text-sky-700 underline">
+            NAIPS
+          </a>{' '}
+          yourself, open a location briefing, copy the text and paste it here. The app reads the METAR / SPECI and TAF; it
+          never logs in to NAIPS.
+        </p>
+        <textarea
+          className="mt-3 h-36 w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-200"
+          placeholder={'Paste briefing text, e.g.\nTAF YBAF 110451Z 1106/1118 05010KT 9999 FEW030\nMETAR YBAF 110630Z AUTO 04012KT 9999 // NCD 24/17 Q1018'}
+          value={pasted}
+          onChange={(e) => setPasted(e.target.value)}
+        />
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setParsed(parseBriefing(pasted));
+              setApplied('');
+            }}
+            disabled={!pasted.trim()}
+            className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-40"
+          >
+            Read briefing
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setPasted('');
+              setParsed(null);
+            }}
+            className="rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100"
+          >
+            Clear
+          </button>
+        </div>
+        {parsed && parsed.metars.length + parsed.tafs.length === 0 && (
+          <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            No METAR, SPECI or TAF found in the pasted text.
+          </p>
+        )}
+        {parsed && (
+          <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {[...new Set([...parsed.metars, ...parsed.tafs].map((r) => r.icaoId))].map((id) => {
+              const m = parsed.metars.find((x) => x.icaoId === id);
+              const t = parsed.tafs.find((x) => x.icaoId === id);
+              const which: Which = !same && id === state.arrival.icao.toUpperCase() ? 'arrival' : 'departure';
+              const name = m?.name ?? t?.name;
+              return (
+                <div key={id} className="rounded-lg border border-slate-200 p-3">
+                  <div className="mb-2 text-sm font-semibold">
+                    {id}
+                    {name ? `: ${name}` : ''} <span className="font-normal text-slate-500">(from pasted briefing)</span>
+                  </div>
+                  {m ? <MetarView m={m} onApply={() => apply(which, m)} which={which} /> : <p className="text-sm text-slate-500">No METAR / SPECI.</p>}
+                  <h3 className="mt-4 mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">TAF</h3>
+                  {t ? (
+                    <pre className="whitespace-pre-wrap rounded-lg bg-slate-50 p-3 font-mono text-xs leading-relaxed">
+                      {formatTaf(t.rawTAF).join('\n')}
+                    </pre>
+                  ) : (
+                    <p className="text-sm text-slate-500">No TAF.</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
     </div>
   );
 }
