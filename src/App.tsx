@@ -1,16 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AircraftDocuments } from './components/AircraftDocuments';
 import { PrintSheet } from './components/PrintSheet';
 import { Weather } from './components/Weather';
 import { AircraftEditor } from './components/AircraftEditor';
+import { MySheets } from './components/MySheets';
 import { Performance } from './components/Performance';
 import { StatusPill, Toggle } from './components/ui';
 import { WeightBalance } from './components/WeightBalance';
 import { computePerformance } from './lib/performance';
+import { buildSheet, reopenSheet, saveSheet, type SavedSheet } from './lib/sheets';
+import { supabase, useSession } from './lib/supabase';
 import { computeWB } from './lib/wb';
 import { DEFAULT_STATE, usePersistentState } from './state';
 
-const TABS = ['W&B', 'Performance', 'NAIPS / Wx', 'Aircraft'] as const;
+const TABS = ['W&B', 'Performance', 'NAIPS / Wx', 'Aircraft', 'My sheets'] as const;
 type Tab = (typeof TABS)[number];
 
 export default function App() {
@@ -19,6 +22,44 @@ export default function App() {
   const aircraft = state.aircraft.find((a) => a.id === state.selectedId) ?? state.aircraft[0];
   const wb = computeWB(aircraft, state.loading);
   const perf = computePerformance(state, aircraft, wb);
+  const auth = useSession();
+  const [saving, setSaving] = useState(false);
+  const [sheetsVersion, setSheetsVersion] = useState(0);
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 6000);
+    return () => clearTimeout(t);
+  }, [notice]);
+
+  const save = async () => {
+    if (!auth.session) {
+      setTab('My sheets');
+      setNotice({ ok: false, text: 'Sign in to save load sheets.' });
+      return;
+    }
+    setSaving(true);
+    try {
+      await saveSheet(buildSheet(state, aircraft, wb, perf));
+      setSheetsVersion((v) => v + 1);
+      setNotice({ ok: true, text: `Load sheet for ${aircraft.registration} saved to My sheets.` });
+    } catch (e) {
+      setNotice({ ok: false, text: `Couldn't save: ${e instanceof Error ? e.message : String(e)}` });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const open = (sheet: SavedSheet) => {
+    const { next, aircraftChanged } = reopenSheet(state, sheet);
+    setState(() => next);
+    setTab('W&B');
+    setNotice({
+      ok: true,
+      text: `Opened the ${sheet.registration} sheet saved ${new Date(sheet.created_at).toLocaleString()}.${aircraftChanged ? ' The aircraft data has changed since, so the data saved with the sheet is shown.' : ''}`,
+    });
+  };
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-16 print:px-0 print:pb-0">
@@ -46,6 +87,17 @@ export default function App() {
             </select>
             <Toggle label="Mass units" value={state.units.mass} options={['kg', 'lb'] as const} onChange={(mass) => setState((s) => ({ ...s, units: { ...s.units, mass } }))} />
             <Toggle label="Fuel units" value={state.units.fuel} options={['L', 'USG'] as const} onChange={(fuel) => setState((s) => ({ ...s, units: { ...s.units, fuel } }))} />
+            {supabase && (
+              <button
+                type="button"
+                onClick={save}
+                disabled={saving}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 hover:bg-slate-100 disabled:opacity-50"
+                title={auth.session ? 'Save this load sheet to My sheets' : 'Sign in to save load sheets'}
+              >
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => window.print()}
@@ -56,13 +108,13 @@ export default function App() {
             </button>
           </div>
         </div>
-        <nav className="no-print mt-3 flex gap-1" aria-label="Sections">
+        <nav className="no-print -mx-4 mt-3 flex gap-1 overflow-x-auto px-4" aria-label="Sections">
           {TABS.map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => setTab(t)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium ${t === tab ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-200'}`}
+              className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium ${t === tab ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-200'}`}
             >
               {t}
               {t === 'W&B' && (
@@ -73,6 +125,14 @@ export default function App() {
             </button>
           ))}
         </nav>
+        {notice && (
+          <p
+            role="status"
+            className={`mt-2 rounded-md px-3 py-1.5 text-sm ${notice.ok ? 'bg-emerald-50 text-emerald-900' : 'bg-amber-50 text-amber-900'}`}
+          >
+            {notice.text}
+          </p>
+        )}
       </header>
 
       <main className="no-print">
@@ -81,6 +141,7 @@ export default function App() {
         )}
         {tab === 'Performance' && <Performance state={state} setState={setState} aircraft={aircraft} wb={wb} />}
         {tab === 'NAIPS / Wx' && <Weather state={state} setState={setState} />}
+        {tab === 'My sheets' && <MySheets auth={auth} units={state.units} reloadKey={sheetsVersion} onOpen={open} />}
         {tab === 'Aircraft' && (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <AircraftEditor

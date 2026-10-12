@@ -39,6 +39,19 @@ Cloudflare dashboard editor, which works as well as `wrangler deploy`). For loca
 The international feed only has the major aerodromes (YBBN, YBSU, YBCG, YAMB…). Smaller ones such as YBAF, YRED,
 YMMB and YSBK, and all NOTAMs, are only in NAIPS, which needs a login, so the tab links to it.
 
+## Accounts and saved load sheets (Supabase)
+
+Optional. With a Supabase project connected, pilots can create an account, **Save** a load sheet (inputs, the
+aircraft data used, and the results) and reopen or delete it later from **My sheets**. Row level security means each
+user can only read, add and delete their own sheets; saved sheets can't be edited.
+
+1. Create a free project at supabase.com.
+2. SQL Editor → paste `supabase/schema.sql` → Run.
+3. Put the project URL and the public anon key in `.env.production` as `VITE_SUPABASE_URL` and
+   `VITE_SUPABASE_ANON_KEY` (both are meant to be public; never use the service-role key here).
+
+Without them the app works as before, just without saving.
+
 ## Where the numbers come from
 
 | Data | Source |
