@@ -70,6 +70,13 @@ describe('weight & balance', () => {
     expect(r.zeroFuel.armM * 1000).toBeCloseTo(238, 0);
   });
 
+  it('take-off uses the full start-up fuel; taxi fuel only comes off for landing', () => {
+    const load = { ...noFuel, seatsKg: 160, baggageKg: 0, fuelL: 91, taxiFuelL: 5, tripFuelL: 30 };
+    const r = computeWB(VH_XTN, load);
+    expect(r.takeoff.massKg).toBeCloseTo(556 + 160 + 91 * 0.72);
+    expect(r.landing.massKg).toBeCloseTo(556 + 160 + (91 - 5 - 30) * 0.72);
+  });
+
   it('flags aft CG with a light pilot, max baggage and full fuel', () => {
     const r = computeWB(VH_XTN, { ...noFuel, seatsKg: 60, baggageKg: 10, baggageExtKg: 10, fuelL: 91 });
     expect(r.takeoff.withinCg).toBe(false);

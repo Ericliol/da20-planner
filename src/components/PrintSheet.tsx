@@ -17,7 +17,7 @@ export function PrintSheet(props: { aircraft: Aircraft; loading: Loading; wb: WB
   const { aircraft, loading, wb, perf, units } = props;
   const now = usePrintTime();
   const ok = wb.ok && perf.toOk && perf.ldOk;
-  const points = [wb.zeroFuel, wb.ramp, wb.takeoff, wb.landing];
+  const points = [wb.zeroFuel, wb.takeoff, wb.landing];
 
   return (
     <div className="hidden text-slate-900 print:block">

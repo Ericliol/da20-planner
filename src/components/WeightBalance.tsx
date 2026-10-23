@@ -18,7 +18,7 @@ export function WeightBalance(props: {
   const fs = fuelScale(units);
   const set = (k: keyof Loading) => (v: number) => setLoading({ ...loading, [k]: v });
   const cap = USABLE_FUEL_L[aircraft.fuelSystem];
-  const points = [r.zeroFuel, r.ramp, r.takeoff, r.landing];
+  const points = [r.zeroFuel, r.takeoff, r.landing];
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <Card title="Load">
@@ -40,7 +40,7 @@ export function WeightBalance(props: {
             scale={fs}
             hint={`Lever arm ${fmtArm(ARM.fuel, units)} · usable max ${fmtFuel(cap, units)} · ${fmtMass(loading.fuelL * FUEL_KG_PER_L, units)}`}
           />
-          <NumberField expression label="Taxi fuel" value={loading.taxiFuelL} onChange={set('taxiFuelL')} unit={units.fuel} scale={fs} />
+          <NumberField expression label="Taxi fuel" value={loading.taxiFuelL} onChange={set('taxiFuelL')} unit={units.fuel} scale={fs} hint="For the landing CG only; take-off uses full start-up fuel" />
           <NumberField expression label="Trip fuel burn" value={loading.tripFuelL} onChange={set('tripFuelL')} unit={units.fuel} scale={fs} hint="For the landing CG" />
           <div className="flex items-end">
             <button

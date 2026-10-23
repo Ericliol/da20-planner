@@ -51,7 +51,7 @@ export function LoadingTable(props: { aircraft: Aircraft; loading: Loading; resu
       desc: [
         '6.01 lb per US gal / 0.72 kg per litre',
         lever(ARM.fuel, '32.44'),
-        `${fmtFuel(loading.fuelL, units)} at start-up − ${fmtFuel(loading.taxiFuelL, units)} taxi = ${fmtFuel(loading.fuelL - loading.taxiFuelL, units)}`,
+        `${fmtFuel(loading.fuelL, units)} at start-up (taxi fuel not deducted)`,
       ],
       massKg: toFuelKg,
       armM: ARM.fuel,
@@ -63,13 +63,7 @@ export function LoadingTable(props: { aircraft: Aircraft; loading: Loading; resu
       desc: ['Sum of 6. and 7.'],
       ...total(r.takeoff),
     },
-    {
-      no: '',
-      title: 'Ramp (before taxi)',
-      desc: [`With ${fmtFuel(loading.fuelL, units)} start-up fuel. Max ramp weight 1770 lb (803 kg).`],
-      ...total(r.ramp),
-    },
-    { no: '', title: 'Landing', desc: [`After ${fmtFuel(loading.tripFuelL, units)} trip fuel burn`], ...total(r.landing) },
+    { no: '', title: 'Landing', desc: [`After ${fmtFuel(loading.taxiFuelL, units)} taxi + ${fmtFuel(loading.tripFuelL, units)} trip fuel burn`], ...total(r.landing) },
   ];
 
   const cell = compact ? 'py-0.5' : 'py-2';

@@ -4,7 +4,6 @@ import {
   FUEL_KG_PER_L,
   type FuelSystem,
   MAX_BAGGAGE_KG,
-  MAX_RAMP_KG,
   MAX_TAKEOFF_KG,
   USABLE_FUEL_L,
 } from './afm';
@@ -54,7 +53,6 @@ export interface LoadPoint {
 export interface WBResult {
   stations: Station[];
   zeroFuel: LoadPoint;
-  ramp: LoadPoint;
   takeoff: LoadPoint;
   landing: LoadPoint;
   errors: string[];
@@ -95,14 +93,15 @@ export function computeWB(ac: Aircraft, load: Loading): WBResult {
   const zfMoment = stations.reduce((s, x) => s + x.momentKgM, 0);
 
   const fuelKg = (l: number) => Math.max(0, l) * FUEL_KG_PER_L;
-  const rampFuel = fuelKg(load.fuelL);
-  const toFuel = fuelKg(load.fuelL - load.taxiFuelL);
+  // Take-off is calculated with the full start-up fuel (taxi fuel not deducted), which
+  // is conservative and makes it the same point as the ramp weight. Taxi fuel is still
+  // burned before landing, so it is deducted for the landing point.
+  const toFuel = fuelKg(load.fuelL);
   const ldgFuel = fuelKg(load.fuelL - load.taxiFuelL - load.tripFuelL);
-  stations.push(station('Usable fuel (start-up)', rampFuel, ARM.fuel));
+  stations.push(station('Usable fuel (start-up)', toFuel, ARM.fuel));
 
   const at = (label: string, f: number, max: number) => point(label, zfMass + f, zfMoment + f * ARM.fuel, max);
   const zeroFuel = at('Zero fuel', 0, MAX_TAKEOFF_KG);
-  const ramp = at('Ramp', rampFuel, MAX_RAMP_KG);
   const takeoff = at('Take-off', toFuel, MAX_TAKEOFF_KG);
   const landing = at('Landing', ldgFuel, MAX_TAKEOFF_KG);
 
@@ -112,9 +111,9 @@ export function computeWB(ac: Aircraft, load: Loading): WBResult {
   const cap = USABLE_FUEL_L[ac.fuelSystem];
   if (load.fuelL > cap + 0.05) errors.push(`Fuel ${load.fuelL} L exceeds usable capacity (${cap} L).`);
   if (load.taxiFuelL + load.tripFuelL > load.fuelL) errors.push('Taxi + trip fuel exceeds fuel on board.');
-  for (const p of [zeroFuel, ramp, takeoff, landing]) {
+  for (const p of [zeroFuel, takeoff, landing]) {
     if (!p.withinMass) errors.push(`${p.label} mass ${p.massKg.toFixed(1)} kg exceeds the ${p.maxMassKg} kg limit.`);
     if (!p.withinCg) errors.push(`${p.label} CG ${(p.armM * 1000).toFixed(1)} mm is outside limits (${(p.limits.fwd * 1000).toFixed(1)}–${(p.limits.aft * 1000).toFixed(1)} mm).`);
   }
-  return { stations, zeroFuel, ramp, takeoff, landing, errors, ok: errors.length === 0 };
+  return { stations, zeroFuel, takeoff, landing, errors, ok: errors.length === 0 };
 }

@@ -18,7 +18,6 @@ const sy = (kg: number) => H - PAD.b - ((kg - MASS[0]) / (MASS[1] - MASS[0])) * 
 
 const COLORS: Record<string, string> = {
   'Zero fuel': '#64748b',
-  Ramp: '#a855f7',
   'Take-off': '#0284c7',
   Landing: '#16a34a',
 };
@@ -28,8 +27,6 @@ export function Envelope({ points, units }: { points: LoadPoint[]; units: Units 
   const [active, setActive] = useState<string | null>(null);
   const activePoint = points.find((p) => p.label === active);
   const imperial = units.mass === 'lb';
-  // Ramp sits almost on top of take-off, so its support lines only show when hovered.
-  const guided = points.filter((p) => p.label !== 'Ramp' || p.label === active);
   const colorOf = (p: LoadPoint) => (p.withinCg && p.withinMass ? COLORS[p.label] : '#dc2626');
   const momentText = (p: LoadPoint) =>
     imperial ? `${Math.round(p.momentKgM * INLB_PER_KGM).toLocaleString()}` : p.momentKgM.toFixed(1);
@@ -41,7 +38,6 @@ export function Envelope({ points, units }: { points: LoadPoint[]; units: Units 
     ? [1200, 1300, 1400, 1500, 1600, 1700, 1764].map((lb) => lb / LB_PER_KG)
     : [550, 600, 650, 700, 750, 800];
   const path = ENVELOPE.map(([kgm, kg], i) => `${i ? 'L' : 'M'}${sx(kgm)},${sy(kg)}`).join('') + 'Z';
-  const flight = points.filter((p) => p.label !== 'Ramp');
 
   // Fine grid like Fig 6.8: 200 in·lb x 20 lb (imperial) or 5 kg·m x 10 kg (metric).
   const steps = (from: number, to: number, step: number) =>
@@ -124,7 +120,7 @@ export function Envelope({ points, units }: { points: LoadPoint[]; units: Units 
         </text>
 
         {/* support lines: down to the moment axis, across to the weight axis */}
-        {guided.map((p) => {
+        {points.map((p) => {
           const c = colorOf(p);
           return (
             <g key={`s-${p.label}`} stroke={c} strokeWidth="0.9" strokeDasharray="4 2.5" opacity="0.85">
@@ -135,7 +131,7 @@ export function Envelope({ points, units }: { points: LoadPoint[]; units: Units 
         })}
 
         <polyline
-          points={flight.map((p) => `${sx(p.momentKgM)},${sy(p.massKg)}`).join(' ')}
+          points={points.map((p) => `${sx(p.momentKgM)},${sy(p.massKg)}`).join(' ')}
           fill="none"
           stroke="#94a3b8"
           strokeDasharray="4 3"
@@ -164,20 +160,20 @@ export function Envelope({ points, units }: { points: LoadPoint[]; units: Units 
           );
         })}
         {/* axis intercepts */}
-        {guided.map((p) => (
+        {points.map((p) => (
           <g key={`t-${p.label}`} stroke={colorOf(p)} strokeWidth="1.6">
             <line x1={sx(p.momentKgM)} x2={sx(p.momentKgM)} y1={H - PAD.b - 4} y2={H - PAD.b + 4} />
             <line x1={PAD.l - 4} x2={PAD.l + 4} y1={sy(p.massKg)} y2={sy(p.massKg)} />
           </g>
         ))}
-        {spread(guided.map((p) => ({ key: p.label, pos: sx(p.momentKgM), w: tagWidth(momentText(p)) })), PAD.l, W - PAD.r).map(
+        {spread(points.map((p) => ({ key: p.label, pos: sx(p.momentKgM), w: tagWidth(momentText(p)) })), PAD.l, W - PAD.r).map(
           ({ key, pos }) => {
-            const p = guided.find((g) => g.label === key)!;
+            const p = points.find((g) => g.label === key)!;
             return <AxisTag key={`xm-${key}`} cx={pos} cy={H - PAD.b - 9} text={momentText(p)} color={colorOf(p)} />;
           },
         )}
-        {spread(guided.map((p) => ({ key: p.label, pos: sy(p.massKg), w: 13 })), PAD.t, H - PAD.b).map(({ key, pos }) => {
-          const p = guided.find((g) => g.label === key)!;
+        {spread(points.map((p) => ({ key: p.label, pos: sy(p.massKg), w: 13 })), PAD.t, H - PAD.b).map(({ key, pos }) => {
+          const p = points.find((g) => g.label === key)!;
           const text = massText(p);
           return <AxisTag key={`ym-${key}`} cx={PAD.l + 6 + tagWidth(text) / 2} cy={pos} text={text} color={colorOf(p)} />;
         })}
