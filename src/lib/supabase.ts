@@ -31,3 +31,30 @@ export function useSession(): AuthView {
 
 export const displayName = (s: Session | null) =>
   (s?.user.user_metadata?.name as string | undefined) || s?.user.email || '';
+
+/** Whether Google sign-in is switched on for the project (read from the public auth settings). */
+export function useGoogleEnabled(): boolean {
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => {
+    if (!url || !key) return;
+    let alive = true;
+    fetch(`${url}/auth/v1/settings`, { headers: { apikey: key } })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((s) => alive && setEnabled(!!s?.external?.google))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return enabled;
+}
+
+/** Start Google sign-in; Google sends the user back to this page, where the session is picked up. */
+export async function signInWithGoogle(): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + window.location.pathname },
+  });
+  if (error) throw error;
+}
