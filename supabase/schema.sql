@@ -19,6 +19,12 @@ create index if not exists load_sheets_user_created on public.load_sheets (user_
 -- There is deliberately no UPDATE policy: a saved sheet is a record and can't be changed.
 alter table public.load_sheets enable row level security;
 
+-- Only what the app needs: signed-in users may read, add and delete (rows still limited by
+-- the policies below); signed-out visitors get nothing. Supabase grants everything by default,
+-- so revoke first (this also covers the case where new tables aren't exposed automatically).
+revoke all on public.load_sheets from anon, authenticated;
+grant select, insert, delete on public.load_sheets to authenticated;
+
 drop policy if exists "read own sheets" on public.load_sheets;
 create policy "read own sheets" on public.load_sheets
   for select to authenticated using (auth.uid() = user_id);
