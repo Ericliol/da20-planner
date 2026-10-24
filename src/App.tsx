@@ -174,7 +174,10 @@ export default function App() {
         <strong>Training aid only.</strong> Not an approved flight planning tool. Results come from the DA20-C1 AFM (DOC #
         DA202-C1, Rev 28) charts and tables, digitised and interpolated, and may differ from a hand reading of the charts.
         Always cross-check against the AFM and the aircraft's current weight &amp; balance data. The pilot in command
-        is responsible for the loading and performance of the aircraft.
+        is responsible for the loading and performance of the aircraft.{' '}
+        <a href="./privacy.html" className="underline">
+          Privacy
+        </a>
       </footer>
     </div>
   );
